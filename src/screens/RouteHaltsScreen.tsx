@@ -9,7 +9,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { ArrowLeft, Clock, Edit2, Play, MapPin, Check } from 'lucide-react-native';
+import { Edit2, Play, Check } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useAppState } from '../context/AppStateContext';
 
@@ -46,85 +46,49 @@ export const RouteHaltsScreen: React.FC<RouteHaltsScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header Bar */}
-      <View style={styles.headerBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <ArrowLeft size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Route Halts Review</Text>
-          <Text style={styles.headerSubtitle}>{activeRoute} - {activeRouteName}</Text>
-        </View>
-      </View>
-
-      {/* Halts List */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.infoBanner}>
-          <MapPin size={18} color={COLORS.primary} />
-          <Text style={styles.infoBannerText}>
-            Review schedule and edit stop labels before starting trip tracking.
-          </Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header Title & Subtitle */}
+        <View style={styles.header}>
+          <Text style={styles.routeCodeTitle}>{activeRoute}</Text>
+          <View style={styles.routeDetailsRow}>
+            <Text style={styles.routeLocationText}>
+              {activeRouteName.split(' to ')[0]}
+            </Text>
+            <View style={styles.locationDivider} />
+            <Text style={styles.routeLocationText}>
+              {activeRouteName.split(' to ')[1] || 'Kottawa'}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.timelineContainer}>
-          {halts.map((halt, index) => {
-            const isFirst = index === 0;
-            const isLast = index === halts.length - 1;
-
-            return (
-              <View key={halt.id} style={styles.timelineItem}>
-                {/* Timeline node line */}
-                <View style={styles.nodeColumn}>
-                  <View
-                    style={[
-                      styles.nodeCircle,
-                      isFirst && styles.startNode,
-                      isLast && styles.endNode,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.nodeNumber,
-                        (isFirst || isLast) && { color: COLORS.white },
-                      ]}
-                    >
-                      {index + 1}
-                    </Text>
-                  </View>
-                  {!isLast && <View style={styles.nodeLine} />}
-                </View>
-
-                {/* Halt Card */}
-                <View style={styles.haltCard}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.haltName}>{halt.name}</Text>
-                    <View style={styles.timeRow}>
-                      <Clock size={14} color={COLORS.textSecondary} />
-                      <Text style={styles.timeText}>{halt.scheduledTime}</Text>
-                    </View>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.editBtn}
-                    onPress={() => openEditModal(halt.id, halt.name)}
-                  >
-                    <Edit2 size={16} color={COLORS.primary} />
-                    <Text style={styles.editText}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
+        {/* Halts List */}
+        <View style={styles.haltsList}>
+          {halts.map((halt, index) => (
+            <View key={halt.id} style={styles.haltCard}>
+              <View style={styles.numberCircle}>
+                <Text style={styles.numberText}>{index + 1}</Text>
               </View>
-            );
-          })}
-        </View>
-      </ScrollView>
 
-      {/* Fixed Bottom Action Bar */}
-      <View style={styles.footerBar}>
+              <View style={{ flex: 1, marginLeft: 14 }}>
+                <Text style={styles.haltName}>{halt.name}</Text>
+                <Text style={styles.scheduledTime}>{halt.scheduledTime}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.editIconBtn}
+                onPress={() => openEditModal(halt.id, halt.name)}
+              >
+                <Edit2 size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+
+        {/* Bottom Confirm & Start Trip Button */}
         <TouchableOpacity style={styles.confirmStartBtn} onPress={handleStartTrip}>
-          <Play size={20} color={COLORS.white} style={{ marginRight: 8 }} />
           <Text style={styles.confirmStartText}>Confirm & Start Trip</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* Edit Halt Modal */}
       <Modal visible={!!editingHaltId} transparent animationType="fade">
@@ -160,150 +124,98 @@ export const RouteHaltsScreen: React.FC<RouteHaltsScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backBtn: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: '#F1F5F9',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: 100,
+    paddingVertical: 20,
+    paddingBottom: 40,
   },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E0F2FE',
-    padding: 12,
-    borderRadius: 12,
+  header: {
     marginBottom: 20,
+    marginTop: 10,
   },
-  infoBannerText: {
-    fontSize: 13,
-    color: '#0369A1',
-    marginLeft: 8,
-    flex: 1,
-    fontWeight: '500',
+  routeCodeTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0F172A',
   },
-  timelineContainer: {
-    paddingLeft: 4,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  nodeColumn: {
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  nodeCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.white,
-  },
-  startNode: {
-    backgroundColor: COLORS.primary,
-  },
-  endNode: {
-    backgroundColor: COLORS.darkBlue,
-  },
-  nodeNumber: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  nodeLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: '#CBD5E1',
-    marginVertical: 4,
-  },
-  haltCard: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  haltName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  timeRow: {
+  routeDetailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
   },
-  timeText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginLeft: 4,
+  routeLocationText: {
+    fontSize: 15,
+    color: '#64748B',
+    fontWeight: '500',
   },
-  editBtn: {
+  locationDivider: {
+    width: 2,
+    height: 14,
+    backgroundColor: '#94A3B8',
+    marginHorizontal: 8,
+  },
+  haltsList: {
+    marginBottom: 24,
+  },
+  haltCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F9FF',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1.5,
   },
-  editText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginLeft: 4,
-  },
-  footerBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  confirmStartBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
-    flexDirection: 'row',
+  numberCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  numberText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  haltName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  scheduledTime: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  editIconBtn: {
+    padding: 8,
+  },
+  confirmStartBtn: {
+    backgroundColor: COLORS.primary, // #0E86D4
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
   confirmStartText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
   modalOverlay: {

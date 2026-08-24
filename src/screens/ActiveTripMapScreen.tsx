@@ -9,13 +9,10 @@ import {
   Dimensions,
 } from 'react-native';
 import {
-  Bus,
-  Clock,
-  MapPin,
   Users,
   UserCheck,
-  CheckCircle2,
-  AlertTriangle,
+  MapPin,
+  AlertCircle,
   Navigation,
 } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
@@ -44,158 +41,95 @@ export const ActiveTripMapScreen: React.FC<ActiveTripMapScreenProps> = ({
   const isLastHalt = currentHaltIndex >= halts.length - 1;
 
   const handleMarkComplete = () => {
-    markHaltComplete(currentHalt.id);
-    if (isLastHalt) {
+    if (currentHaltIndex < halts.length - 1) {
+      markHaltComplete(halts[currentHaltIndex].id);
+    } else {
+      markHaltComplete(halts[currentHaltIndex].id);
       onFinishTrip();
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Header Bar */}
-      <View style={styles.topHeader}>
-        <View style={styles.routeHeaderInfo}>
-          <View style={styles.liveBadge}>
-            <View style={styles.pulseDot} />
-            <Text style={styles.liveText}>GPS LIVE</Text>
-          </View>
-          <Text style={styles.headerRouteTitle}>{activeRoute} Tracking</Text>
-        </View>
-
-        <View style={styles.timerBadge}>
-          <Clock size={16} color={COLORS.darkBlue} />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Top Header Row */}
+        <View style={styles.topHeader}>
+          <Text style={styles.routeTitle}>{activeRoute}</Text>
           <Text style={styles.timerText}>{tripElapsedTime}</Text>
         </View>
-      </View>
 
-      {/* Vector Line-Based Map Visualization Box */}
-      <View style={styles.mapContainer}>
-        <View style={styles.mapGridBackground}>
-          {/* Simulated Grid Lines */}
-          <View style={[styles.gridLine, { top: 40 }]} />
-          <View style={[styles.gridLine, { top: 100 }]} />
-          <View style={[styles.gridLine, { top: 160 }]} />
-        </View>
+        {/* Map Visualization Card matching exact reference image */}
+        <View style={styles.mapCard}>
+          <View style={styles.mapBackground}>
+            {/* Curved Path Line */}
+            <View style={styles.curvedPathLine} />
 
-        {/* Vector Route Line */}
-        <View style={styles.vectorRouteLine}>
-          {halts.map((h, i) => {
-            const isPassed = i < currentHaltIndex;
-            const isCurrent = i === currentHaltIndex;
-            return (
-              <View key={h.id} style={styles.vectorStopNodeWrapper}>
+            {/* Vector Nodes along path */}
+            {halts.map((h, i) => {
+              const isPassed = i < currentHaltIndex;
+              const isCurrent = i === currentHaltIndex;
+
+              // Diagonal node positioning matching design curve
+              const leftPercent = 15 + i * 11;
+              const topPercent = 80 - i * 11;
+
+              return (
                 <View
+                  key={h.id}
                   style={[
-                    styles.vectorLineSegment,
-                    i === 0 && { backgroundColor: 'transparent' },
-                    isPassed || isCurrent
-                      ? { backgroundColor: COLORS.primary }
-                      : { backgroundColor: '#CBD5E1' },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.vectorNodeCircle,
-                    isPassed && styles.nodePassed,
-                    isCurrent && styles.nodeCurrent,
+                    styles.mapNode,
+                    { left: `${leftPercent}%`, top: `${topPercent}%` },
                   ]}
                 >
                   {isCurrent ? (
-                    <Bus size={16} color={COLORS.white} />
+                    <View style={styles.currentActiveNodeBadge}>
+                      <View style={styles.innerActiveDot} />
+                    </View>
                   ) : isPassed ? (
-                    <CheckCircle2 size={14} color={COLORS.white} />
+                    <View style={styles.passedGreenNode} />
                   ) : (
-                    <View style={styles.futureNodeDot} />
+                    <View style={styles.upcomingBlueOutlineNode} />
                   )}
                 </View>
-                <Text
-                  style={[
-                    styles.vectorNodeLabel,
-                    isCurrent && styles.vectorNodeLabelActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {h.name.split(' ')[0]}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Distance & ETA Floating Badge */}
-        <View style={styles.etaFloatingBadge}>
-          <Navigation size={16} color={COLORS.primary} />
-          <Text style={styles.etaText}>1.2 km away • 4 mins ETA</Text>
-        </View>
-      </View>
-
-      {/* Active Halt Card Section */}
-      <ScrollView contentContainerStyle={styles.bottomContent}>
-        <View style={styles.activeHaltCard}>
-          <View style={styles.cardTopHeader}>
-            <View style={styles.currentHaltBadge}>
-              <Text style={styles.currentHaltBadgeText}>
-                Active Stop ({currentHaltIndex + 1}/{halts.length})
-              </Text>
-            </View>
-            <View style={styles.scheduledBadge}>
-              <Clock size={12} color={COLORS.textSecondary} />
-              <Text style={styles.scheduledText}>{currentHalt.scheduledTime}</Text>
-            </View>
+              );
+            })}
           </View>
+        </View>
 
+        {/* Active Halt Details Card */}
+        <View style={styles.haltDetailsCard}>
           <Text style={styles.haltTitle}>{currentHalt.name}</Text>
 
-          {/* Passenger & Odometer Details Row */}
-          <View style={styles.passengerMetricsRow}>
+          <View style={styles.metricsRow}>
             <View style={styles.metricItem}>
-              <View style={[styles.metricIconBg, { backgroundColor: '#E0F2FE' }]}>
-                <Users size={20} color={COLORS.primary} />
-              </View>
-              <View style={{ marginLeft: 10 }}>
-                <Text style={styles.metricValue}>
-                  {currentHalt.passengersWaiting} Passengers
-                </Text>
-                <Text style={styles.metricLabel}>Waiting at Stop</Text>
-              </View>
+              <Users size={20} color={COLORS.primary} />
+              <Text style={styles.waitingText}>{currentHalt.passengersWaiting} waiting</Text>
             </View>
 
-            <View style={styles.metricDivider} />
-
             <View style={styles.metricItem}>
-              <View style={[styles.metricIconBg, { backgroundColor: '#F1F5F9' }]}>
-                <UserCheck size={20} color={COLORS.textSecondary} />
-              </View>
-              <View style={{ marginLeft: 10 }}>
-                <Text style={styles.metricValue}>
-                  {currentHalt.passengersAlighting} Passengers
-                </Text>
-                <Text style={styles.metricLabel}>Getting Off</Text>
-              </View>
+              <Users size={20} color="#64748B" />
+              <Text style={styles.gettingOffText}>{currentHalt.passengersAlighting} getting off</Text>
             </View>
           </View>
 
-          {/* Action Buttons */}
-          <View style={styles.actionButtonsCol}>
-            <TouchableOpacity
-              style={styles.markCompleteBtn}
-              onPress={handleMarkComplete}
-            >
-              <CheckCircle2 size={22} color={COLORS.white} style={{ marginRight: 8 }} />
-              <Text style={styles.markCompleteText}>
-                {isLastHalt ? 'Mark Last Halt & Finish Trip' : 'Mark Halt Complete'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.reportBreakdownBtn}
-              onPress={onReportBreakdown}
-            >
-              <AlertTriangle size={18} color={COLORS.alert} style={{ marginRight: 8 }} />
-              <Text style={styles.reportBreakdownText}>Report Breakdown</Text>
-            </TouchableOpacity>
+          <View style={styles.distanceRow}>
+            <MapPin size={18} color="#64748B" />
+            <Text style={styles.distanceText}>1.2 km • 4 min</Text>
           </View>
         </View>
+
+        {/* Primary Mark Halt Complete Button */}
+        <TouchableOpacity style={styles.markCompleteBtn} onPress={handleMarkComplete}>
+          <Text style={styles.markCompleteText}>
+            {isLastHalt ? 'Finish Trip' : 'Mark Halt Complete'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Secondary Outline Report Breakdown Button */}
+        <TouchableOpacity style={styles.reportBreakdownBtn} onPress={onReportBreakdown}>
+          <AlertCircle size={20} color="#EF4444" style={{ marginRight: 8 }} />
+          <Text style={styles.reportBreakdownText}>Report Breakdown</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -204,270 +138,179 @@ export const ActiveTripMapScreen: React.FC<ActiveTripMapScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F8FAFC',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingBottom: 90,
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    marginBottom: 16,
+    marginTop: 8,
   },
-  routeHeaderInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  pulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.alert,
-    marginRight: 6,
-  },
-  liveText: {
-    fontSize: 11,
+  routeTitle: {
+    fontSize: 26,
     fontWeight: '800',
-    color: COLORS.alert,
-  },
-  headerRouteTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  timerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    color: '#0F172A',
   },
   timerText: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '700',
-    color: COLORS.darkBlue,
-    marginLeft: 6,
+    color: COLORS.primary, // #0E86D4
   },
-  mapContainer: {
-    height: 210,
-    backgroundColor: '#0F172A',
-    justifyContent: 'center',
-    position: 'relative',
+  mapCard: {
+    height: 310,
+    backgroundColor: '#EEF7FF', // Light subtle blue map backdrop
+    borderRadius: 24,
     overflow: 'hidden',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  mapGridBackground: {
-    ...StyleSheet.absoluteFill,
-    opacity: 0.15,
-  },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: COLORS.white,
-  },
-  vectorRouteLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    justifyContent: 'space-between',
-  },
-  vectorStopNodeWrapper: {
-    alignItems: 'center',
+  mapBackground: {
     flex: 1,
+    position: 'relative',
+    justifyContent: 'center',
   },
-  vectorLineSegment: {
+  curvedPathLine: {
     position: 'absolute',
-    top: 15,
-    left: '-50%',
-    right: '50%',
-    height: 3,
-    zIndex: 1,
+    left: '10%',
+    bottom: '15%',
+    width: '80%',
+    height: '70%',
+    borderLeftWidth: 4,
+    borderTopWidth: 4,
+    borderColor: COLORS.primary,
+    borderRadius: 180,
+    transform: [{ rotate: '-25deg' }],
   },
-  vectorNodeCircle: {
+  mapNode: {
+    position: 'absolute',
+    zIndex: 10,
+  },
+  currentActiveNodeBadge: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#334155',
+    backgroundColor: COLORS.white,
+    borderWidth: 6,
+    borderColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 2,
-    borderWidth: 2,
-    borderColor: COLORS.white,
-  },
-  nodePassed: {
-    backgroundColor: COLORS.success,
-  },
-  nodeCurrent: {
-    backgroundColor: COLORS.primary,
-    transform: [{ scale: 1.15 }],
-  },
-  futureNodeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#94A3B8',
-  },
-  vectorNodeLabel: {
-    fontSize: 10,
-    color: '#94A3B8',
-    marginTop: 6,
-    fontWeight: '500',
-  },
-  vectorNodeLabelActive: {
-    color: COLORS.white,
-    fontWeight: '700',
-  },
-  etaFloatingBadge: {
-    position: 'absolute',
-    bottom: 12,
-    alignSelf: 'center',
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
-  etaText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginLeft: 6,
+  innerActiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
   },
-  bottomContent: {
-    padding: 20,
+  passedGreenNode: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#6EE7B7', // Light soft green filled dot matching reference image
+    borderWidth: 3,
+    borderColor: COLORS.white,
   },
-  activeHaltCard: {
+  upcomingBlueOutlineNode: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: COLORS.white,
-    borderRadius: 24,
+    borderWidth: 4,
+    borderColor: COLORS.primary,
+  },
+  haltDetailsCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     padding: 20,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardTopHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  currentHaltBadge: {
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  currentHaltBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.darkBlue,
-  },
-  scheduledBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  scheduledText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginLeft: 4,
-    fontWeight: '600',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   haltTitle: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
-    color: COLORS.textPrimary,
-    marginBottom: 16,
+    color: '#0F172A',
+    marginBottom: 14,
   },
-  passengerMetricsRow: {
+  metricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   metricItem: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 24,
   },
-  metricIconBg: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricValue: {
-    fontSize: 15,
+  waitingText: {
+    fontSize: 16,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: COLORS.primary,
+    marginLeft: 8,
   },
-  metricLabel: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
+  gettingOffText: {
+    fontSize: 15,
+    color: '#64748B',
+    marginLeft: 8,
+    fontWeight: '500',
   },
-  metricDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: '#CBD5E1',
-    marginHorizontal: 10,
-  },
-  actionButtonsCol: {},
-  markCompleteBtn: {
-    backgroundColor: COLORS.success,
-    paddingVertical: 16,
-    borderRadius: 14,
+  distanceRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  distanceText: {
+    fontSize: 14,
+    color: '#64748B',
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  markCompleteBtn: {
+    backgroundColor: COLORS.primary, // #0E86D4
+    height: 56,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    shadowColor: COLORS.success,
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
     elevation: 3,
   },
   markCompleteText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
   reportBreakdownBtn: {
     backgroundColor: COLORS.white,
+    height: 56,
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: COLORS.alert,
-    paddingVertical: 14,
-    borderRadius: 14,
+    borderColor: '#FCA5A5',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   reportBreakdownText: {
-    color: COLORS.alert,
-    fontSize: 15,
+    color: '#EF4444',
+    fontSize: 16,
     fontWeight: '700',
   },
 });

@@ -10,6 +10,15 @@ export interface DocumentItem {
   daysRemaining?: number;
 }
 
+export interface CostItem {
+  id: string;
+  type: 'FUEL' | 'REPAIR';
+  date: string;
+  amount: number; // LKR
+  liters?: number; // L for fuel
+  stationOrDescription: string;
+}
+
 export interface FuelLogItem {
   id: string;
   date: string;
@@ -42,8 +51,9 @@ interface AppStateContextType {
   currentHaltIndex: number;
   halts: HaltItem[];
   documents: DocumentItem[];
-  fuelLogs: FuelLogItem[];
+  costs: CostItem[];
   totalFuelToday: number;
+  totalRepairToday: number;
   totalFuelMonth: number;
   hasLocationPermission: boolean;
   setHasLocationPermission: (val: boolean) => void;
@@ -54,7 +64,7 @@ interface AppStateContextType {
   confirmStartTrip: () => void;
   markHaltComplete: (haltId: string) => void;
   reportBreakdown: (reason: string, notes: string) => void;
-  addFuelLog: (log: Omit<FuelLogItem, 'id'>) => void;
+  addCostLog: (log: Omit<CostItem, 'id'>) => void;
   updateHaltName: (haltId: string, newName: string) => void;
 }
 
@@ -97,13 +107,15 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     { id: 'd5', name: 'AC Fitness Certificate', category: 'vehicle', status: 'warning', expiryDate: '2026-09-18', daysRemaining: 24 },
   ]);
 
-  const [fuelLogs, setFuelLogs] = useState<FuelLogItem[]>([
-    { id: 'f1', date: 'May 25, 2026', amount: 9450, liters: 45, station: 'Pettah Fuel Station' },
-    { id: 'f2', date: 'May 24, 2026', amount: 8820, liters: 42, station: 'Kottawa Fuel Station' },
-    { id: 'f3', date: 'May 23, 2026', amount: 10080, liters: 48, station: 'Malabe Fuel Station' },
+  const [costs, setCosts] = useState<CostItem[]>([
+    { id: 'c1', type: 'FUEL', date: 'May 25, 2026', amount: 9450, liters: 45, stationOrDescription: 'Pettah Fuel Station' },
+    { id: 'c2', type: 'FUEL', date: 'May 24, 2026', amount: 8820, liters: 42, stationOrDescription: 'Kottawa Fuel Station' },
+    { id: 'c3', type: 'REPAIR', date: 'May 22, 2026', amount: 3500, stationOrDescription: 'Headlight Bulb & Fuse Replacement' },
+    { id: 'c4', type: 'FUEL', date: 'May 21, 2026', amount: 10080, liters: 48, stationOrDescription: 'Malabe Fuel Station' },
   ]);
 
   const totalFuelToday = 9450;
+  const totalRepairToday = 0;
   const totalFuelMonth = 285600;
 
   // Restore saved login session on startup
@@ -181,13 +193,15 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTripStatus('breakdown');
   };
 
-  const addFuelLog = (log: Omit<FuelLogItem, 'id'>) => {
-    const newLog: FuelLogItem = {
+  const addCostLog = (log: Omit<CostItem, 'id'>) => {
+    const newLog: CostItem = {
       ...log,
-      id: `f_${Date.now()}`,
+      id: `c_${Date.now()}`,
     };
-    setFuelLogs(prev => [newLog, ...prev]);
-    setFuelLoggedToday(prev => prev + log.liters);
+    setCosts(prev => [newLog, ...prev]);
+    if (log.type === 'FUEL' && typeof log.liters === 'number') {
+      setFuelLoggedToday(prev => prev + (log.liters || 0));
+    }
   };
 
   const updateHaltName = (haltId: string, newName: string) => {
@@ -213,8 +227,9 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         currentHaltIndex,
         halts,
         documents,
-        fuelLogs,
+        costs,
         totalFuelToday,
+        totalRepairToday,
         totalFuelMonth,
         hasLocationPermission,
         setHasLocationPermission,
@@ -225,7 +240,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         confirmStartTrip,
         markHaltComplete,
         reportBreakdown,
-        addFuelLog,
+        addCostLog,
         updateHaltName,
       }}
     >
