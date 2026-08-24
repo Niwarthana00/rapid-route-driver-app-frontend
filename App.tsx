@@ -22,16 +22,26 @@ import { BreakdownReportScreen } from './src/screens/BreakdownReportScreen';
 import { MyDocumentsScreen } from './src/screens/MyDocumentsScreen';
 import { FuelLogScreen } from './src/screens/FuelLogScreen';
 
-type TabType = 'home' | 'active_map' | 'documents' | 'fuel';
+import { ProfileScreen } from './src/screens/ProfileScreen';
+import { SplashScreen } from './src/screens/SplashScreen';
+import { User as UserIcon } from 'lucide-react-native';
+
+type TabType = 'home' | 'active_map' | 'documents' | 'fuel' | 'profile';
+
+import { TripCompletedScreen } from './src/screens/TripCompletedScreen';
 
 function MainAppContent() {
   const { isAuthenticated, isLoadingSession, tripStatus, logout } = useAppState();
 
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('home');
 
   // Sub-screens state within Dashboard flow
-  const [currentFlow, setCurrentFlow] = useState<'dashboard' | 'halts_review' | 'active_map' | 'breakdown'>('dashboard');
+  const [currentFlow, setCurrentFlow] = useState<'dashboard' | 'halts_review' | 'active_map' | 'breakdown' | 'trip_completed'>('dashboard');
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
 
   if (isLoadingSession) {
     return (
@@ -39,10 +49,6 @@ function MainAppContent() {
         <Text style={{ fontSize: 16, color: COLORS.textSecondary, fontWeight: '600' }}>Loading Driver Session...</Text>
       </View>
     );
-  }
-
-  if (!hasCompletedOnboarding) {
-    return <OnboardingScreen onFinish={() => setHasCompletedOnboarding(true)} />;
   }
 
   if (!isAuthenticated) {
@@ -74,6 +80,16 @@ function MainAppContent() {
             />
           );
         }
+        if (currentFlow === 'trip_completed') {
+          return (
+            <TripCompletedScreen
+              onDone={() => {
+                setCurrentFlow('dashboard');
+                setActiveTab('home');
+              }}
+            />
+          );
+        }
         return (
           <DashboardScreen
             onNavigateToHalts={() => setCurrentFlow('halts_review')}
@@ -96,12 +112,21 @@ function MainAppContent() {
             />
           );
         }
+        if (currentFlow === 'trip_completed') {
+          return (
+            <TripCompletedScreen
+              onDone={() => {
+                setCurrentFlow('dashboard');
+                setActiveTab('home');
+              }}
+            />
+          );
+        }
         return (
           <ActiveTripMapScreen
             onReportBreakdown={() => setCurrentFlow('breakdown')}
             onFinishTrip={() => {
-              setCurrentFlow('dashboard');
-              setActiveTab('home');
+              setCurrentFlow('trip_completed');
             }}
           />
         );
@@ -111,102 +136,128 @@ function MainAppContent() {
 
       case 'fuel':
         return <FuelLogScreen />;
+
+      case 'profile':
+        return <ProfileScreen />;
     }
   };
 
   return (
     <SafeAreaView style={styles.appContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Main Screen Body */}
       <View style={styles.body}>{renderTabContent()}</View>
 
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => {
-            setActiveTab('home');
-            if (currentFlow !== 'halts_review' && currentFlow !== 'breakdown') {
-              setCurrentFlow('dashboard');
-            }
-          }}
-        >
-          <Home
-            size={22}
-            color={activeTab === 'home' ? COLORS.primary : COLORS.textSecondary}
-          />
-          <Text
-            style={[
-              styles.navLabel,
-              activeTab === 'home' && styles.activeNavLabel,
-            ]}
+      {/* Modern Floating Bottom Navigation Bar matching Passenger App */}
+      <View style={styles.bottomBarWrapper}>
+        <View style={styles.bottomBarContainer}>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => {
+              setActiveTab('home');
+              if (currentFlow !== 'halts_review' && currentFlow !== 'breakdown') {
+                setCurrentFlow('dashboard');
+              }
+            }}
           >
-            Dashboard
-          </Text>
-        </TouchableOpacity>
+            <View style={[styles.iconWrapper, activeTab === 'home' && styles.activeIconWrapper]}>
+              <Home
+                size={22}
+                color={activeTab === 'home' ? COLORS.primary : '#64748B'}
+              />
+            </View>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'home' && styles.activeNavLabel,
+              ]}
+            >
+              Home
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setActiveTab('active_map')}
-        >
-          <View>
-            <Navigation
-              size={22}
-              color={activeTab === 'active_map' ? COLORS.primary : COLORS.textSecondary}
-            />
-            {tripStatus === 'active' && <View style={styles.activeDotBadge} />}
-          </View>
-          <Text
-            style={[
-              styles.navLabel,
-              activeTab === 'active_map' && styles.activeNavLabel,
-            ]}
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setActiveTab('active_map')}
           >
-            Trip Map
-          </Text>
-        </TouchableOpacity>
+            <View style={[styles.iconWrapper, activeTab === 'active_map' && styles.activeIconWrapper]}>
+              <Navigation
+                size={22}
+                color={activeTab === 'active_map' ? COLORS.primary : '#64748B'}
+              />
+              {tripStatus === 'active' && <View style={styles.activeDotBadge} />}
+            </View>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'active_map' && styles.activeNavLabel,
+              ]}
+            >
+              Trip
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setActiveTab('documents')}
-        >
-          <FileText
-            size={22}
-            color={activeTab === 'documents' ? COLORS.primary : COLORS.textSecondary}
-          />
-          <Text
-            style={[
-              styles.navLabel,
-              activeTab === 'documents' && styles.activeNavLabel,
-            ]}
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setActiveTab('documents')}
           >
-            Documents
-          </Text>
-        </TouchableOpacity>
+            <View style={[styles.iconWrapper, activeTab === 'documents' && styles.activeIconWrapper]}>
+              <FileText
+                size={22}
+                color={activeTab === 'documents' ? COLORS.primary : '#64748B'}
+              />
+            </View>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'documents' && styles.activeNavLabel,
+              ]}
+            >
+              Documents
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setActiveTab('fuel')}
-        >
-          <Fuel
-            size={22}
-            color={activeTab === 'fuel' ? COLORS.primary : COLORS.textSecondary}
-          />
-          <Text
-            style={[
-              styles.navLabel,
-              activeTab === 'fuel' && styles.activeNavLabel,
-            ]}
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setActiveTab('fuel')}
           >
-            Fuel Log
-          </Text>
-        </TouchableOpacity>
+            <View style={[styles.iconWrapper, activeTab === 'fuel' && styles.activeIconWrapper]}>
+              <Fuel
+                size={22}
+                color={activeTab === 'fuel' ? COLORS.primary : '#64748B'}
+              />
+            </View>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'fuel' && styles.activeNavLabel,
+              ]}
+            >
+              Costs
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={logout}>
-          <LogOut size={22} color={COLORS.alert} />
-          <Text style={[styles.navLabel, { color: COLORS.alert }]}>Logout</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setActiveTab('profile')}
+          >
+            <View style={[styles.iconWrapper, activeTab === 'profile' && styles.activeIconWrapper]}>
+              <UserIcon
+                size={22}
+                color={activeTab === 'profile' ? COLORS.primary : '#64748B'}
+              />
+            </View>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'profile' && styles.activeNavLabel,
+              ]}
+            >
+              Profile
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -227,30 +278,53 @@ export default function App() {
 const styles = StyleSheet.create({
   appContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F8FAFC',
   },
   body: {
     flex: 1,
   },
-  bottomBar: {
+  bottomBarWrapper: {
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 4,
+  },
+  bottomBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     backgroundColor: COLORS.white,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
+  },
+  iconWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeIconWrapper: {
+    backgroundColor: '#E0F2FE',
   },
   navLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginTop: 4,
+    color: '#64748B',
+    marginTop: 2,
   },
   activeNavLabel: {
     color: COLORS.primary,
@@ -258,8 +332,8 @@ const styles = StyleSheet.create({
   },
   activeDotBadge: {
     position: 'absolute',
-    top: -2,
-    right: -4,
+    top: 2,
+    right: 2,
     width: 8,
     height: 8,
     borderRadius: 4,

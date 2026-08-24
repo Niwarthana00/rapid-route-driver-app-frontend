@@ -8,14 +8,16 @@ import {
   SafeAreaView,
 } from 'react-native';
 import {
-  Bus,
   Users,
   Fuel,
-  AlertTriangle,
+  FileText,
   Play,
   ArrowRight,
+  Clock,
   ShieldCheck,
   CheckCircle2,
+  MapPin,
+  Bus,
 } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useAppState } from '../context/AppStateContext';
@@ -31,7 +33,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 }) => {
   const {
     driverName,
-    vehicleNo,
     activeRoute,
     activeRouteName,
     passengersToday,
@@ -40,124 +41,107 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     tripStatus,
   } = useAppState();
 
-  // Find expiring revenue license or any document with warning/expired
-  const expiringDoc = documents.find(
-    d => d.status === 'warning' || d.status === 'expired'
-  );
+  const expiringDoc = documents.find(d => d.status === 'warning' || d.status === 'expired');
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Driver Header */}
-        <View style={styles.headerRow}>
-          <View style={styles.driverProfile}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {driverName
-                  .split(' ')
-                  .map(n => n[0])
-                  .join('')}
-              </Text>
-            </View>
-            <View style={{ marginLeft: 12 }}>
-              <Text style={styles.greeting}>Welcome back,</Text>
-              <Text style={styles.driverName}>{driverName}</Text>
-            </View>
-          </View>
-
-          <View style={styles.statusBadge}>
-            <View style={styles.activeDot} />
-            <Text style={styles.statusText}>Scheduled Duty</Text>
-          </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header Greeting */}
+        <View style={styles.header}>
+          <Text style={styles.greetingTitle}>Good morning, {driverName.split(' ')[0]}</Text>
         </View>
 
         {/* Assigned Route Card */}
         <View style={styles.routeCard}>
-          <View style={styles.routeCardHeader}>
-            <View style={styles.routeBadge}>
-              <Bus size={18} color={COLORS.white} />
-              <Text style={styles.routeBadgeText}>{activeRoute}</Text>
+          <View style={styles.routeHeaderRow}>
+            <Text style={styles.routeCode}>{activeRoute}</Text>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>
+                {tripStatus === 'active' ? 'Trip Active' : 'Trip Not Started'}
+              </Text>
             </View>
-            <Text style={styles.vehicleNo}>{vehicleNo}</Text>
           </View>
 
-          <Text style={styles.routeName}>{activeRouteName}</Text>
-
-          <View style={styles.routeStatsRow}>
-            <Text style={styles.routeDetail}>8 Halts Scheduled</Text>
-            <Text style={styles.routeDetail}>•  Estimated 1h 35m</Text>
+          <View style={styles.routeDetailsRow}>
+            <Text style={styles.routeLocationText}>
+              {activeRouteName.split(' to ')[0]}
+            </Text>
+            <View style={styles.locationDivider} />
+            <Text style={styles.routeLocationText}>
+              {activeRouteName.split(' to ')[1] || 'Kottawa'}
+            </Text>
           </View>
         </View>
 
-        {/* KPI Stats Grid */}
-        <Text style={styles.sectionTitle}>Daily Overview</Text>
+        {/* 3 KPI Stats Row */}
         <View style={styles.kpiRow}>
-          {/* Passengers Today Card */}
+          {/* Passengers Today */}
           <View style={styles.kpiCard}>
-            <View style={[styles.kpiIconBadge, { backgroundColor: '#E0F2FE' }]}>
-              <Users size={22} color={COLORS.primary} />
-            </View>
+            <Users size={24} color={COLORS.primary} style={{ marginBottom: 12 }} />
             <Text style={styles.kpiValue}>{passengersToday}</Text>
             <Text style={styles.kpiLabel}>Passengers Today</Text>
           </View>
 
-          {/* Fuel Logged Card */}
+          {/* Fuel Logged */}
           <View style={styles.kpiCard}>
-            <View style={[styles.kpiIconBadge, { backgroundColor: '#DCFCE7' }]}>
-              <Fuel size={22} color={COLORS.success} />
-            </View>
-            <Text style={styles.kpiValue}>{fuelLoggedToday} L</Text>
+            <Fuel size={24} color={COLORS.primary} style={{ marginBottom: 12 }} />
+            <Text style={styles.kpiValue}>{fuelLoggedToday}L</Text>
             <Text style={styles.kpiLabel}>Fuel Logged</Text>
           </View>
-        </View>
 
-        {/* Licence Expiry Warning Card */}
-        {expiringDoc && (
-          <View
-            style={[
-              styles.warningCard,
-              expiringDoc.status === 'expired'
-                ? { borderColor: COLORS.alert, backgroundColor: '#FEF2F2' }
-                : { borderColor: COLORS.warning, backgroundColor: '#FFFBEB' },
-            ]}
-          >
-            <View style={styles.warningHeader}>
-              <AlertTriangle
-                size={22}
-                color={expiringDoc.status === 'expired' ? COLORS.alert : COLORS.warning}
-              />
-              <Text style={styles.warningTitle}>
-                {expiringDoc.name} {expiringDoc.status === 'expired' ? 'Expired' : 'Expiring Soon'}
-              </Text>
-            </View>
-            <Text style={styles.warningDesc}>
-              {expiringDoc.status === 'expired'
-                ? `Expired on ${expiringDoc.expiryDate}. Please renew immediately.`
-                : `${expiringDoc.daysRemaining} days remaining (Expires ${expiringDoc.expiryDate}).`}
-            </Text>
+          {/* Days to Expiry */}
+          <View style={styles.kpiCard}>
+            <FileText size={24} color="#F59E0B" style={{ marginBottom: 12 }} />
+            <Text style={styles.kpiValue}>18</Text>
+            <Text style={styles.kpiLabel}>Days to Expiry</Text>
           </View>
-        )}
+        </View>
 
         {/* Primary Action Button */}
         {tripStatus === 'active' ? (
           <TouchableOpacity
-            style={[styles.primaryActionBtn, { backgroundColor: COLORS.success }]}
+            style={[styles.primaryStartBtn, { backgroundColor: '#10B981' }]}
             onPress={onNavigateToActiveMap}
           >
-            <CheckCircle2 size={24} color={COLORS.white} style={{ marginRight: 8 }} />
-            <Text style={styles.primaryActionText}>Resume Active Trip (Route 138)</Text>
-            <ArrowRight size={20} color={COLORS.white} style={{ marginLeft: 'auto' }} />
+            <Text style={styles.startBtnText}>Resume Active Trip</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={styles.primaryActionBtn}
+            style={styles.primaryStartBtn}
             onPress={onNavigateToHalts}
           >
-            <Play size={22} color={COLORS.white} style={{ marginRight: 8 }} />
-            <Text style={styles.primaryActionText}>Start Trip</Text>
-            <ArrowRight size={20} color={COLORS.white} style={{ marginLeft: 'auto' }} />
+            <Text style={styles.startBtnText}>Start Trip</Text>
           </TouchableOpacity>
         )}
+
+        {/* Bottom Extra Information Section */}
+        <View style={styles.extraSection}>
+          <Text style={styles.sectionHeading}>Today's Schedule Summary</Text>
+
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <View style={styles.iconCircleBg}>
+                <Clock size={18} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.summaryTitle}>First Shift: 06:00 AM Departure</Text>
+                <Text style={styles.summarySubtitle}>Pettah Depot to Kottawa Central</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardDivider} />
+
+            <View style={styles.summaryRow}>
+              <View style={[styles.iconCircleBg, { backgroundColor: '#DCFCE7' }]}>
+                <ShieldCheck size={18} color="#166534" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.summaryTitle}>Vehicle Pre-Check Verified</Text>
+                <Text style={styles.summarySubtitle}>NB-4592 AC Bus • Fuel 85%</Text>
+              </View>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -166,192 +150,166 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingHorizontal: 20,
     paddingVertical: 20,
+    paddingBottom: 90,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  header: {
     marginBottom: 20,
+    marginTop: 10,
   },
-  driverProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.darkBlue,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  greeting: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-  },
-  driverName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.success,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#166534',
+  greetingTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0F172A',
   },
   routeCard: {
-    backgroundColor: COLORS.darkBlue,
+    backgroundColor: COLORS.white,
     borderRadius: 20,
     padding: 20,
-    marginBottom: 24,
-    shadowColor: '#0055A5',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  routeCardHeader: {
+  routeHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  routeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
+  routeCode: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  statusBadge: {
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 14,
   },
-  routeBadgeText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    fontSize: 14,
-    marginLeft: 6,
-  },
-  vehicleNo: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  statusBadgeText: {
     fontSize: 13,
     fontWeight: '600',
+    color: '#64748B',
   },
-  routeName: {
-    color: COLORS.white,
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  routeStatsRow: {
+  routeDetailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4,
   },
-  routeDetail: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 13,
-    marginRight: 8,
+  routeLocationText: {
+    fontSize: 15,
+    color: '#64748B',
+    fontWeight: '500',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 14,
+  locationDivider: {
+    width: 2,
+    height: 14,
+    backgroundColor: '#94A3B8',
+    marginHorizontal: 8,
   },
   kpiRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 24,
   },
   kpiCard: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 16,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  kpiIconBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    borderRadius: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   kpiValue: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: '#0F172A',
+    marginBottom: 4,
   },
   kpiLabel: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  warningCard: {
+  primaryStartBtn: {
+    backgroundColor: COLORS.primary, // #0E86D4
+    height: 56,
     borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    marginBottom: 24,
-  },
-  warningHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
-  },
-  warningTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginLeft: 8,
-  },
-  warningDesc: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    lineHeight: 18,
-  },
-  primaryActionBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    marginBottom: 28,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
-  primaryActionText: {
+  startBtnText: {
     color: COLORS.white,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  extraSection: {
+    marginTop: 4,
+  },
+  sectionHeading: {
     fontSize: 17,
     fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  summaryCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconCircleBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  summarySubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 12,
   },
 });

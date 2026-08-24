@@ -10,17 +10,17 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import { Bus, MapPin, Eye, EyeOff, ShieldCheck, ChevronDown, Check } from 'lucide-react-native';
+import { MapPin, Eye, EyeOff, ShieldCheck, ChevronDown, Check } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useAppState } from '../context/AppStateContext';
 
 export const AuthScreen: React.FC = () => {
   const { login, signup, setHasLocationPermission } = useAppState();
-  const [tab, setTab] = useState<'login' | 'signup'>('login');
+  const [isSignUp, setIsSignUp] = useState(false);
 
   // Login form state
-  const [loginInput, setLoginInput] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   // Signup form state
@@ -41,8 +41,8 @@ export const AuthScreen: React.FC = () => {
   const licenseClasses = ['A (Motorcycle)', 'B (Route Bus)', 'C (Heavy Vehicle)', 'D (Trailer)'];
 
   const handleLoginSubmit = () => {
-    if (!loginInput || !loginPassword) {
-      Alert.alert('Required Fields', 'Please enter your phone/email and password.');
+    if (!emailInput || !passwordInput) {
+      Alert.alert('Required Fields', 'Please enter your email/phone and password.');
       return;
     }
     triggerLocationPrompt(login);
@@ -72,55 +72,40 @@ export const AuthScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header Branding */}
-        <View style={styles.header}>
-          <View style={styles.iconCircle}>
-            <Bus size={32} color={COLORS.primary} />
-          </View>
-          <Text style={styles.title}>SmartBus Driver</Text>
-          <Text style={styles.subtitle}>Sign in to access assigned route trips</Text>
-        </View>
+        
+        {!isSignUp ? (
+          /* LOGIN SCREEN matching image style */
+          <View style={styles.contentWrapper}>
+            <Text style={styles.welcomeTitle}>Welcome back</Text>
+            <Text style={styles.welcomeSubtitle}>Enter your email & password to continue</Text>
 
-        {/* Tab Toggle */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabButton, tab === 'login' && styles.activeTab]}
-            onPress={() => setTab('login')}
-          >
-            <Text style={[styles.tabText, tab === 'login' && styles.activeTabText]}>Login</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, tab === 'signup' && styles.activeTab]}
-            onPress={() => setTab('signup')}
-          >
-            <Text style={[styles.tabText, tab === 'signup' && styles.activeTabText]}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Login Form */}
-        {tab === 'login' ? (
-          <View style={styles.formContainer}>
-            <Text style={styles.label}>Phone Number or Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 0771234567 or driver@smartbus.lk"
-              placeholderTextColor="#94A3B8"
-              value={loginInput}
-              onChangeText={setLoginInput}
-            />
-
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordWrapper}>
+            {/* Email Field */}
+            <Text style={styles.fieldLabel}>Email or Phone</Text>
+            <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                style={styles.inputField}
+                placeholder="77 123 4567 or driver@smartbus.lk"
+                placeholderTextColor="#94A3B8"
+                value={emailInput}
+                onChangeText={setEmailInput}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Password Field */}
+            <Text style={styles.fieldLabel}>Password</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.inputField, { flex: 1 }]}
                 placeholder="Enter password"
                 placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
-                value={loginPassword}
-                onChangeText={setLoginPassword}
+                value={passwordInput}
+                onChangeText={setPasswordInput}
               />
               <TouchableOpacity
-                style={styles.eyeIcon}
+                style={styles.eyeIconBtn}
                 onPress={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
@@ -131,73 +116,97 @@ export const AuthScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.submitBtn} onPress={handleLoginSubmit}>
-              <Text style={styles.submitBtnText}>Continue to Dashboard</Text>
+            {/* Continue Primary Button */}
+            <TouchableOpacity style={styles.primaryContinueBtn} onPress={handleLoginSubmit}>
+              <Text style={styles.continueBtnText}>Continue</Text>
             </TouchableOpacity>
+
+            {/* Create New Account Link */}
+            <View style={styles.linkContainer}>
+              <Text style={styles.noAccountText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => setIsSignUp(true)}>
+                <Text style={styles.createAccountLink}>Create new account</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
-          /* Signup Form */
-          <View style={styles.formContainer}>
-            <Text style={styles.label}>Full Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Kusum Perera"
-              placeholderTextColor="#94A3B8"
-              value={fullName}
-              onChangeText={setFullName}
-            />
+          /* SIGNUP SCREEN */
+          <View style={styles.contentWrapper}>
+            <Text style={styles.welcomeTitle}>Create account</Text>
+            <Text style={styles.welcomeSubtitle}>Register as an authorized SmartBus Driver</Text>
+
+            <Text style={styles.fieldLabel}>Full Name *</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.inputField}
+                placeholder="Kusum Perera"
+                placeholderTextColor="#94A3B8"
+                value={fullName}
+                onChangeText={setFullName}
+              />
+            </View>
 
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 6 }}>
-                <Text style={styles.label}>Phone Number *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0771234567"
-                  keyboardType="phone-pad"
-                  placeholderTextColor="#94A3B8"
-                  value={phone}
-                  onChangeText={setPhone}
-                />
+                <Text style={styles.fieldLabel}>Phone Number *</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="0771234567"
+                    keyboardType="phone-pad"
+                    placeholderTextColor="#94A3B8"
+                    value={phone}
+                    onChangeText={setPhone}
+                  />
+                </View>
               </View>
+
               <View style={{ flex: 1, marginLeft: 6 }}>
-                <Text style={styles.label}>Email (Optional)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="driver@smartbus.lk"
-                  keyboardType="email-address"
-                  placeholderTextColor="#94A3B8"
-                  value={email}
-                  onChangeText={setEmail}
-                />
+                <Text style={styles.fieldLabel}>Email (Optional)</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="driver@smartbus.lk"
+                    keyboardType="email-address"
+                    placeholderTextColor="#94A3B8"
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+                </View>
               </View>
             </View>
 
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 6 }}>
-                <Text style={styles.label}>NIC Number *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="199012345678"
-                  placeholderTextColor="#94A3B8"
-                  value={nic}
-                  onChangeText={setNic}
-                />
+                <Text style={styles.fieldLabel}>NIC Number *</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="199012345678"
+                    placeholderTextColor="#94A3B8"
+                    value={nic}
+                    onChangeText={setNic}
+                  />
+                </View>
               </View>
+
               <View style={{ flex: 1, marginLeft: 6 }}>
-                <Text style={styles.label}>License Number *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="B1234567"
-                  placeholderTextColor="#94A3B8"
-                  value={licenseNo}
-                  onChangeText={setLicenseNo}
-                />
+                <Text style={styles.fieldLabel}>License Number *</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="B1234567"
+                    placeholderTextColor="#94A3B8"
+                    value={licenseNo}
+                    onChangeText={setLicenseNo}
+                  />
+                </View>
               </View>
             </View>
 
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 6 }}>
-                <Text style={styles.label}>License Class</Text>
+                <Text style={styles.fieldLabel}>License Class</Text>
                 <TouchableOpacity
                   style={styles.dropdownPicker}
                   onPress={() => setShowClassPicker(!showClassPicker)}
@@ -208,18 +217,20 @@ export const AuthScreen: React.FC = () => {
               </View>
 
               <View style={{ flex: 1, marginLeft: 6 }}>
-                <Text style={styles.label}>License Expiry Date</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#94A3B8"
-                  value={licenseExpiry}
-                  onChangeText={setLicenseExpiry}
-                />
+                <Text style={styles.fieldLabel}>License Expiry</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#94A3B8"
+                    value={licenseExpiry}
+                    onChangeText={setLicenseExpiry}
+                  />
+                </View>
               </View>
             </View>
 
-            {/* License Class Picker Inline Options */}
+            {/* License Class Dropdown Options */}
             {showClassPicker && (
               <View style={styles.classOptionsCard}>
                 {licenseClasses.map(cls => (
@@ -238,24 +249,35 @@ export const AuthScreen: React.FC = () => {
               </View>
             )}
 
-            <Text style={styles.label}>Password *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Create strong password"
-              placeholderTextColor="#94A3B8"
-              secureTextEntry
-              value={signupPassword}
-              onChangeText={setSignupPassword}
-            />
+            <Text style={styles.fieldLabel}>Password *</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.inputField}
+                placeholder="Create strong password"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry
+                value={signupPassword}
+                onChangeText={setSignupPassword}
+              />
+            </View>
 
-            <TouchableOpacity style={styles.submitBtn} onPress={handleSignupSubmit}>
-              <Text style={styles.submitBtnText}>Register & Continue</Text>
+            {/* Primary Register Button */}
+            <TouchableOpacity style={styles.primaryContinueBtn} onPress={handleSignupSubmit}>
+              <Text style={styles.continueBtnText}>Register & Continue</Text>
             </TouchableOpacity>
+
+            {/* Back to Login Link */}
+            <View style={styles.linkContainer}>
+              <Text style={styles.noAccountText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => setIsSignUp(false)}>
+                <Text style={styles.createAccountLink}>Log in</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </ScrollView>
 
-      {/* Location Permission Dialog Modal */}
+      {/* Location Permission Modal */}
       <Modal
         visible={showPermissionModal}
         transparent
@@ -299,117 +321,70 @@ export const AuthScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 12,
-  },
-  iconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 36,
+    flexGrow: 1,
     justifyContent: 'center',
-    marginBottom: 12,
   },
-  title: {
-    fontSize: 24,
+  contentWrapper: {
+    width: '100%',
+  },
+  welcomeTitle: {
+    fontSize: 28,
     fontWeight: '800',
-    color: COLORS.darkBlue,
+    color: '#0F172A',
+    marginBottom: 6,
   },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 20,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  activeTab: {
-    backgroundColor: COLORS.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tabText: {
+  welcomeSubtitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: '#64748B',
+    marginBottom: 28,
   },
-  activeTabText: {
-    color: COLORS.darkBlue,
-  },
-  formContainer: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  label: {
+  fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: '#334155',
     marginBottom: 6,
     marginTop: 10,
   },
-  input: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-  },
-  passwordWrapper: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 54,
+    marginBottom: 8,
   },
-  eyeIcon: {
+  inputField: {
+    fontSize: 15,
+    color: '#0F172A',
+    width: '100%',
+  },
+  eyeIconBtn: {
     position: 'absolute',
-    right: 14,
-  },
-  row: {
-    flexDirection: 'row',
+    right: 16,
   },
   dropdownPicker: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 54,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   dropdownText: {
     fontSize: 14,
-    color: COLORS.textPrimary,
+    color: '#0F172A',
   },
   classOptionsCard: {
     backgroundColor: '#F1F5F9',
@@ -427,19 +402,43 @@ const styles = StyleSheet.create({
   },
   classOptionText: {
     fontSize: 14,
-    color: COLORS.textPrimary,
+    color: '#0F172A',
   },
-  submitBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
+  row: {
+    flexDirection: 'row',
+  },
+  primaryContinueBtn: {
+    backgroundColor: COLORS.primary, // #0E86D4
+    height: 54,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 16,
+    justifyContent: 'center',
+    marginTop: 20,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  submitBtnText: {
+  continueBtnText: {
     color: COLORS.white,
     fontSize: 16,
     fontWeight: '700',
+  },
+  linkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  noAccountText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  createAccountLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   modalOverlay: {
     flex: 1,

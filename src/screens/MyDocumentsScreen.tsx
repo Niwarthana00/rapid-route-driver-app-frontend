@@ -7,17 +7,15 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Modal,
-  Image,
 } from 'react-native';
 import {
+  AlertTriangle,
   FileText,
   CheckCircle2,
-  AlertTriangle,
   XCircle,
   Upload,
-  Eye,
-  X,
-  FileCheck,
+  ArrowRight,
+  ShieldAlert,
 } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useAppState, DocumentItem } from '../context/AppStateContext';
@@ -25,12 +23,11 @@ import { useAppState, DocumentItem } from '../context/AppStateContext';
 export const MyDocumentsScreen: React.FC = () => {
   const { documents } = useAppState();
 
-  const [activeCategory, setActiveCategory] = useState<'all' | 'driver' | 'vehicle'>('all');
+  const [showAlertModal, setShowAlertModal] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
 
-  const filteredDocs = documents.filter(d =>
-    activeCategory === 'all' ? true : d.category === activeCategory
-  );
+  // Find document with 3 days remaining (or closest warning)
+  const expiringDoc = documents.find(d => d.status === 'warning') || documents[1];
 
   const renderStatusBadge = (doc: DocumentItem) => {
     switch (doc.status) {
@@ -44,9 +41,9 @@ export const MyDocumentsScreen: React.FC = () => {
       case 'warning':
         return (
           <View style={[styles.statusBadge, { backgroundColor: '#FEF3C7' }]}>
-            <AlertTriangle size={14} color={COLORS.warning} />
-            <Text style={[styles.statusText, { color: '#92400E' }]}>
-              Expires in {doc.daysRemaining} days
+            <AlertTriangle size={14} color="#D97706" />
+            <Text style={[styles.statusText, { color: '#B45309' }]}>
+              {doc.daysRemaining || 3} days remaining
             </Text>
           </View>
         );
@@ -62,99 +59,97 @@ export const MyDocumentsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Bar Header */}
-      <View style={styles.topHeader}>
-        <Text style={styles.headerTitle}>My Documents</Text>
-        <Text style={styles.headerSubtitle}>Manage driver and vehicle compliance records</Text>
-
-        {/* Category Filters */}
-        <View style={styles.filterRow}>
-          <TouchableOpacity
-            style={[styles.filterChip, activeCategory === 'all' && styles.activeChip]}
-            onPress={() => setActiveCategory('all')}
-          >
-            <Text style={[styles.filterChipText, activeCategory === 'all' && styles.activeChipText]}>
-              All Documents
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, activeCategory === 'driver' && styles.activeChip]}
-            onPress={() => setActiveCategory('driver')}
-          >
-            <Text style={[styles.filterChipText, activeCategory === 'driver' && styles.activeChipText]}>
-              Driver Files
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, activeCategory === 'vehicle' && styles.activeChip]}
-            onPress={() => setActiveCategory('vehicle')}
-          >
-            <Text style={[styles.filterChipText, activeCategory === 'vehicle' && styles.activeChipText]}>
-              Vehicle Files
-            </Text>
-          </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Documents</Text>
+          <Text style={styles.headerSubtitle}>Manage driver and vehicle compliance files</Text>
         </View>
-      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {filteredDocs.map(doc => (
+        {/* Highlight Banner for Expiring Document matching Image 1 */}
+        {expiringDoc && (
+          <TouchableOpacity
+            style={styles.expiryAlertBanner}
+            onPress={() => setShowAlertModal(true)}
+          >
+            <View style={styles.alertIconCircle}>
+              <AlertTriangle size={22} color="#D97706" />
+            </View>
+
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.alertBannerTitle}>{expiringDoc.name} Expiring Soon!</Text>
+              <Text style={styles.alertBannerSubtitle}>
+                Expires on {expiringDoc.expiryDate} • 3 days remaining
+              </Text>
+            </View>
+
+            <ArrowRight size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+        )}
+
+        {/* Modern Document Cards List */}
+        <Text style={styles.sectionTitle}>Compliance File Records</Text>
+        {documents.map(doc => (
           <View key={doc.id} style={styles.docCard}>
-            <View style={styles.docCardHeader}>
-              <View style={styles.docIconBg}>
+            <View style={styles.docCardRow}>
+              <View style={styles.docIconCircle}>
                 <FileText size={22} color={COLORS.primary} />
               </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
+
+              <View style={{ flex: 1, marginLeft: 14 }}>
                 <Text style={styles.docName}>{doc.name}</Text>
-                <Text style={styles.expiryText}>Expires: {doc.expiryDate}</Text>
+                <Text style={styles.docExpiry}>Expires: {doc.expiryDate}</Text>
               </View>
+
               {renderStatusBadge(doc)}
             </View>
 
-            <View style={styles.docCardActions}>
-              <TouchableOpacity
-                style={styles.viewBtn}
-                onPress={() => setSelectedDoc(doc)}
-              >
-                <Eye size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
-                <Text style={styles.viewBtnText}>View Document</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.uploadBtn}
-                onPress={() => setSelectedDoc(doc)}
-              >
-                <Upload size={16} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
-                <Text style={styles.uploadBtnText}>Upload New</Text>
+            <View style={styles.docActionRow}>
+              <TouchableOpacity style={styles.updateDocBtn} onPress={() => setSelectedDoc(doc)}>
+                <Upload size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
+                <Text style={styles.updateDocText}>Update Document</Text>
               </TouchableOpacity>
             </View>
           </View>
         ))}
       </ScrollView>
 
-      {/* Document View / Replace Modal */}
-      <Modal visible={!!selectedDoc} transparent animationType="slide">
+      {/* 3-Days Remaining Warning Modal matching Image 1 */}
+      <Modal visible={showAlertModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalDocTitle}>{selectedDoc?.name}</Text>
-              <TouchableOpacity onPress={() => setSelectedDoc(null)}>
-                <X size={24} color={COLORS.textPrimary} />
-              </TouchableOpacity>
+          <View style={styles.alertModalCard}>
+            <View style={styles.alertWarningCircle}>
+              <Text style={styles.exclamationMark}>!</Text>
             </View>
 
-            {/* Document Image Mock Preview */}
-            <View style={styles.docPreviewPlaceholder}>
-              <FileCheck size={48} color={COLORS.primary} />
-              <Text style={styles.previewTitle}>Verified Digital Copy</Text>
-              <Text style={styles.previewMeta}>Document ID: {selectedDoc?.id.toUpperCase()}-SRI-LANKA</Text>
-              <Text style={styles.previewDate}>Expires on: {selectedDoc?.expiryDate}</Text>
+            <Text style={styles.modalAlertTitle}>Document Expiring Soon!</Text>
+
+            {/* Inner Revenue License Card */}
+            <View style={styles.modalInnerCard}>
+              <Text style={styles.innerDocName}>{expiringDoc?.name || 'Revenue Licence'}</Text>
+              <Text style={styles.innerExpiryDate}>
+                Expires: {expiringDoc?.expiryDate || 'June 12, 2026'}
+              </Text>
+
+              <View style={styles.orangePillBadge}>
+                <Text style={styles.orangePillText}>3 days remaining</Text>
+              </View>
             </View>
 
-            <TouchableOpacity style={styles.reUploadActionBtn} onPress={() => setSelectedDoc(null)}>
-              <Upload size={18} color={COLORS.white} style={{ marginRight: 8 }} />
-              <Text style={styles.reUploadText}>Replace Document Image</Text>
+            {/* Primary Update Now Button */}
+            <TouchableOpacity
+              style={styles.modalUpdateBtn}
+              onPress={() => setShowAlertModal(false)}
+            >
+              <Text style={styles.modalUpdateText}>Update Now</Text>
+            </TouchableOpacity>
+
+            {/* Remind Me Later Text Link */}
+            <TouchableOpacity
+              style={styles.remindBtn}
+              onPress={() => setShowAlertModal(false)}
+            >
+              <Text style={styles.remindText}>Remind Me Later</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -166,69 +161,82 @@ export const MyDocumentsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  topHeader: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-    marginBottom: 14,
-  },
-  filterRow: {
-    flexDirection: 'row',
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    marginRight: 8,
-  },
-  activeChip: {
-    backgroundColor: COLORS.darkBlue,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  activeChipText: {
-    color: COLORS.white,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 90,
+  },
+  header: {
+    marginBottom: 20,
+    marginTop: 8,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  expiryAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 24,
+  },
+  alertIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFBEB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  alertBannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  alertBannerSubtitle: {
+    fontSize: 12,
+    color: '#D97706',
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 14,
   },
   docCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 16,
-    marginBottom: 14,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  docCardHeader: {
+  docCardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
   },
-  docIconBg: {
+  docIconCircle: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
@@ -236,11 +244,11 @@ const styles = StyleSheet.create({
   docName: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: '#0F172A',
   },
-  expiryText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
+  docExpiry: {
+    fontSize: 13,
+    color: '#64748B',
     marginTop: 2,
   },
   statusBadge: {
@@ -255,104 +263,115 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 4,
   },
-  docCardActions: {
-    flexDirection: 'row',
+  docActionRow: {
+    marginTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    paddingTop: 12,
+    paddingTop: 10,
   },
-  viewBtn: {
-    flex: 1,
+  updateDocBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F0F9FF',
     paddingVertical: 10,
-    borderRadius: 10,
-    marginRight: 6,
+    borderRadius: 12,
   },
-  viewBtnText: {
+  updateDocText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.primary,
-  },
-  uploadBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginLeft: 6,
-  },
-  uploadBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  modalContent: {
+  alertModalCard: {
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 28,
     padding: 24,
-  },
-  modalHeader: {
-    flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
   },
-  modalDocTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  docPreviewPlaceholder: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
-    padding: 30,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  previewTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginTop: 12,
-  },
-  previewMeta: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-  previewDate: {
-    fontSize: 13,
-    color: COLORS.darkBlue,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  reUploadActionBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
-    flexDirection: 'row',
+  alertWarningCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 16,
   },
-  reUploadText: {
+  exclamationMark: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  modalAlertTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 20,
+  },
+  modalInnerCard: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    marginBottom: 24,
+  },
+  innerDocName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  innerExpiryDate: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  orangePillBadge: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  orangePillText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  modalUpdateBtn: {
+    backgroundColor: COLORS.primary, // #0E86D4
+    height: 54,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  modalUpdateText: {
     color: COLORS.white,
     fontSize: 16,
     fontWeight: '700',
+  },
+  remindBtn: {
+    paddingVertical: 8,
+  },
+  remindText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

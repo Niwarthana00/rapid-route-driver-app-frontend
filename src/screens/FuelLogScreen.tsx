@@ -11,57 +11,60 @@ import {
 } from 'react-native';
 import {
   Fuel,
+  Wrench,
   Plus,
-  Calendar,
-  MapPin,
   X,
   Check,
-  TrendingUp,
 } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
-import { useAppState } from '../context/AppStateContext';
+import { useAppState, CostItem } from '../context/AppStateContext';
 
 export const FuelLogScreen: React.FC = () => {
-  const { fuelLogs, totalFuelToday, totalFuelMonth, addFuelLog } = useAppState();
+  const { costs, totalFuelToday, totalRepairToday, totalFuelMonth, addCostLog } = useAppState();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [costType, setCostType] = useState<'FUEL' | 'REPAIR'>('FUEL');
+  const [amount, setAmount] = useState('');
   const [liters, setLiters] = useState('');
-  const [cost, setCost] = useState('');
-  const [station, setStation] = useState('');
+  const [description, setDescription] = useState('');
 
-  const handleSaveLog = () => {
-    if (!liters || !cost || !station) {
+  const handleSaveCost = () => {
+    if (!amount || !description) {
       return;
     }
-    addFuelLog({
+    addCostLog({
+      type: costType,
       date: 'May 25, 2026',
-      amount: parseFloat(cost),
-      liters: parseFloat(liters),
-      station,
+      amount: parseFloat(amount),
+      liters: costType === 'FUEL' && liters ? parseFloat(liters) : undefined,
+      stationOrDescription: description,
     });
+    setAmount('');
     setLiters('');
-    setCost('');
-    setStation('');
+    setDescription('');
     setShowAddModal(false);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Header Bar */}
-      <View style={styles.topHeader}>
-        <Text style={styles.headerTitle}>Costs & Fuel Log</Text>
-        <Text style={styles.headerSubtitle}>Track bus fuel expenses and refill logs</Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Top Header Bar */}
+        <View style={styles.topHeader}>
+          <Text style={styles.headerTitle}>Costs & Fuel Log</Text>
+          <Text style={styles.headerSubtitle}>Track bus fuel expenses and repair logs</Text>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* KPI Summary Cards */}
         <View style={styles.kpiContainer}>
-          <View style={[styles.kpiCard, { backgroundColor: COLORS.darkBlue }]}>
-            <Text style={styles.kpiHeaderLabel}>Today's Fuel Cost</Text>
-            <Text style={styles.kpiMainValue}>LKR {totalFuelToday.toLocaleString()}</Text>
+          <View style={[styles.kpiCard, { backgroundColor: COLORS.primary }]}>
+            <Text style={styles.kpiHeaderLabel}>Today's Total Costs</Text>
+            <Text style={styles.kpiMainValue}>
+              LKR {(totalFuelToday + totalRepairToday).toLocaleString()}
+            </Text>
             <View style={styles.kpiSubRow}>
-              <TrendingUp size={14} color="#93C5FD" />
-              <Text style={styles.kpiSubText}>45 Liters pumped today</Text>
+              <Text style={styles.kpiSubText}>
+                Fuel: LKR {totalFuelToday.toLocaleString()} • Repair: LKR {totalRepairToday.toLocaleString()}
+              </Text>
             </View>
           </View>
 
@@ -76,30 +79,54 @@ export const FuelLogScreen: React.FC = () => {
 
         {/* Transaction History List */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Fuel Entries</Text>
-          <Text style={styles.logCountText}>{fuelLogs.length} Records</Text>
+          <Text style={styles.sectionTitle}>Recent Cost Logs</Text>
+          <Text style={styles.logCountText}>{costs.length} Records</Text>
         </View>
 
-        {fuelLogs.map(log => (
+        {costs.map(log => (
           <View key={log.id} style={styles.logCard}>
-            <View style={styles.logIconCircle}>
-              <Fuel size={20} color={COLORS.primary} />
+            <View
+              style={[
+                styles.logIconCircle,
+                log.type === 'REPAIR' && { backgroundColor: '#FEF2F2' },
+              ]}
+            >
+              {log.type === 'FUEL' ? (
+                <Fuel size={20} color={COLORS.primary} />
+              ) : (
+                <Wrench size={20} color="#EF4444" />
+              )}
             </View>
 
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.stationName}>{log.station}</Text>
+              <Text style={styles.stationName}>{log.stationOrDescription}</Text>
               <View style={styles.metaRow}>
-                <Calendar size={12} color={COLORS.textSecondary} />
                 <Text style={styles.metaText}>{log.date}</Text>
-                <Text style={styles.dotSeparator}>•</Text>
-                <Text style={styles.litersText}>{log.liters} Liters</Text>
+                {log.type === 'FUEL' && log.liters && (
+                  <>
+                    <Text style={styles.dotSeparator}>•</Text>
+                    <Text style={styles.litersText}>{log.liters} Liters</Text>
+                  </>
+                )}
               </View>
             </View>
 
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.amountText}>LKR {log.amount.toLocaleString()}</Text>
-              <View style={styles.receiptTag}>
-                <Text style={styles.receiptTagText}>Logged</Text>
+              <View
+                style={[
+                  styles.receiptTag,
+                  log.type === 'REPAIR' && { backgroundColor: '#FEE2E2' },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.receiptTagText,
+                    log.type === 'REPAIR' && { color: '#991B1B' },
+                  ]}
+                >
+                  {log.type}
+                </Text>
               </View>
             </View>
           </View>
@@ -111,54 +138,78 @@ export const FuelLogScreen: React.FC = () => {
         <Plus size={26} color={COLORS.white} />
       </TouchableOpacity>
 
-      {/* Add Fuel Transaction Modal */}
+      {/* Add Cost Transaction Modal (Fuel & Repair Toggle) */}
       <Modal visible={showAddModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Log Fuel Transaction</Text>
+              <Text style={styles.modalTitle}>Log Bus Expense</Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
                 <X size={24} color={COLORS.textPrimary} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>Station Name / Location</Text>
+            {/* Type Switcher Pills */}
+            <View style={styles.typeSwitchRow}>
+              <TouchableOpacity
+                style={[styles.typePill, costType === 'FUEL' && styles.activeTypePill]}
+                onPress={() => setCostType('FUEL')}
+              >
+                <Fuel size={16} color={costType === 'FUEL' ? COLORS.white : '#64748B'} style={{ marginRight: 6 }} />
+                <Text style={[styles.typePillText, costType === 'FUEL' && styles.activeTypePillText]}>Fuel Log</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.typePill, costType === 'REPAIR' && styles.activeRepairPill]}
+                onPress={() => setCostType('REPAIR')}
+              >
+                <Wrench size={16} color={costType === 'REPAIR' ? COLORS.white : '#64748B'} style={{ marginRight: 6 }} />
+                <Text style={[styles.typePillText, costType === 'REPAIR' && styles.activeTypePillText]}>Repair / Maintenance</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.label}>
+              {costType === 'FUEL' ? 'Station Name / Location' : 'Repair Description'}
+            </Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Pettah Fuel Station"
+              placeholder={costType === 'FUEL' ? 'e.g. Pettah Fuel Station' : 'e.g. Tire Replacement or Engine Repair'}
               placeholderTextColor="#94A3B8"
-              value={station}
-              onChangeText={setStation}
+              value={description}
+              onChangeText={setDescription}
             />
 
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 6 }}>
-                <Text style={styles.label}>Fuel Volume (L)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="45"
-                  keyboardType="numeric"
-                  placeholderTextColor="#94A3B8"
-                  value={liters}
-                  onChangeText={setLiters}
-                />
-              </View>
-              <View style={{ flex: 1, marginLeft: 6 }}>
                 <Text style={styles.label}>Total Amount (LKR)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="9450"
                   keyboardType="numeric"
                   placeholderTextColor="#94A3B8"
-                  value={cost}
-                  onChangeText={setCost}
+                  value={amount}
+                  onChangeText={setAmount}
                 />
               </View>
+
+              {costType === 'FUEL' && (
+                <View style={{ flex: 1, marginLeft: 6 }}>
+                  <Text style={styles.label}>Fuel Volume (L)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="45"
+                    keyboardType="numeric"
+                    placeholderTextColor="#94A3B8"
+                    value={liters}
+                    onChangeText={setLiters}
+                  />
+                </View>
+              )}
             </View>
 
-            <TouchableOpacity style={styles.saveLogBtn} onPress={handleSaveLog}>
+            <TouchableOpacity style={styles.saveLogBtn} onPress={handleSaveCost}>
               <Check size={18} color={COLORS.white} style={{ marginRight: 6 }} />
-              <Text style={styles.saveLogText}>Save Fuel Record</Text>
+              <Text style={styles.saveLogText}>Save Cost Entry</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -170,42 +221,37 @@ export const FuelLogScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  topHeader: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: 100,
+    paddingTop: 36, // Safe Top Spacing
+    paddingBottom: 90,
+  },
+  topHeader: {
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 2,
   },
   kpiContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   kpiCard: {
     borderRadius: 20,
     padding: 20,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   kpiHeaderLabel: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
     fontWeight: '600',
   },
   kpiMainValue: {
@@ -220,46 +266,50 @@ const styles = StyleSheet.create({
   },
   kpiSubText: {
     fontSize: 13,
-    color: '#93C5FD',
-    marginLeft: 6,
+    color: '#E0F2FE',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: '#0F172A',
   },
   logCountText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: '#64748B',
   },
   logCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   logIconCircle: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   stationName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: '#0F172A',
   },
   metaRow: {
     flexDirection: 'row',
@@ -267,29 +317,28 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   metaText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginLeft: 4,
+    fontSize: 13,
+    color: '#64748B',
   },
   dotSeparator: {
     marginHorizontal: 6,
-    color: COLORS.textSecondary,
+    color: '#94A3B8',
   },
   litersText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.darkBlue,
+    color: COLORS.primary,
   },
   amountText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: '#0F172A',
   },
   receiptTag: {
     backgroundColor: '#DCFCE7',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
     marginTop: 4,
   },
   receiptTagText: {
@@ -304,7 +353,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primary, // #0E86D4
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: COLORS.primary,
@@ -312,6 +361,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 6,
+  },
+  typeSwitchRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 16,
+  },
+  typePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTypePill: {
+    backgroundColor: COLORS.primary,
+  },
+  activeRepairPill: {
+    backgroundColor: '#EF4444',
+  },
+  typePillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  activeTypePillText: {
+    color: COLORS.white,
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
@@ -328,7 +407,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,

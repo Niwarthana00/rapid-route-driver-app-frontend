@@ -7,15 +7,12 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
-  Modal,
 } from 'react-native';
 import {
-  ArrowLeft,
-  AlertTriangle,
+  AlertCircle,
   MapPin,
-  Send,
   CheckCircle2,
-  BellRing,
+  Info,
 } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useAppState } from '../context/AppStateContext';
@@ -36,67 +33,58 @@ export const BreakdownReportScreen: React.FC<BreakdownReportScreenProps> = ({
   onBack,
   onAlertSent,
 }) => {
-  const { reportBreakdown, activeRoute } = useAppState();
+  const { reportBreakdown } = useAppState();
 
   const [selectedReason, setSelectedReason] = useState('Engine issue');
   const [notes, setNotes] = useState('');
-  const [showToast, setShowToast] = useState(false);
+  const [isAlertSent, setIsAlertSent] = useState(false);
 
   const handleSubmit = () => {
     reportBreakdown(selectedReason, notes);
-    setShowToast(true);
+    setIsAlertSent(true);
 
     setTimeout(() => {
-      setShowToast(false);
       onAlertSent();
-    }, 2500);
+    }, 2800);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header Bar */}
-      <View style={styles.headerBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <ArrowLeft size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Report Breakdown</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Warning Hero Box */}
-        <View style={styles.warningBox}>
-          <AlertTriangle size={32} color={COLORS.alert} />
-          <Text style={styles.warningBoxTitle}>Emergency / Vehicle Breakdown</Text>
-          <Text style={styles.warningBoxDesc}>
-            Submitting this report will notify SmartBus dispatch admin immediately and update trip status to CANCELLED.
-          </Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Header Title with Alert Circle Icon */}
+        <View style={styles.headerRow}>
+          <AlertCircle size={28} color="#EF4444" style={{ marginRight: 10 }} />
+          <Text style={styles.headerTitle}>Report Breakdown</Text>
         </View>
 
-        {/* Current Location */}
-        <Text style={styles.label}>Current Location</Text>
+        {/* Current Location Card */}
         <View style={styles.locationCard}>
-          <MapPin size={20} color={COLORS.primary} />
-          <View style={{ marginLeft: 10 }}>
-            <Text style={styles.locationTitle}>Rajagiriya Junction, Colombo</Text>
-            <Text style={styles.locationCoords}>6.9083° N, 79.8964° E • GPS Verified</Text>
+          <MapPin size={22} color={COLORS.primary} />
+          <View style={{ marginLeft: 12 }}>
+            <Text style={styles.locationLabel}>Current Location</Text>
+            <Text style={styles.locationName}>Rajagiriya Junction, Colombo</Text>
           </View>
         </View>
 
         {/* Breakdown Reason Choices */}
-        <Text style={styles.label}>Breakdown Reason</Text>
-        <View style={styles.pillRow}>
+        <Text style={styles.sectionLabel}>Breakdown Reason</Text>
+        <View style={styles.reasonGrid}>
           {breakdownReasons.map(reason => {
             const isSelected = selectedReason === reason;
             return (
               <TouchableOpacity
                 key={reason}
-                style={[styles.pillBtn, isSelected && styles.pillBtnSelected]}
+                style={[
+                  styles.reasonButton,
+                  isSelected ? styles.selectedReasonBtn : styles.unselectedReasonBtn,
+                ]}
                 onPress={() => setSelectedReason(reason)}
               >
                 <Text
                   style={[
-                    styles.pillBtnText,
-                    isSelected && styles.pillBtnTextSelected,
+                    styles.reasonText,
+                    isSelected ? styles.selectedReasonText : styles.unselectedReasonText,
                   ]}
                 >
                   {reason}
@@ -106,48 +94,48 @@ export const BreakdownReportScreen: React.FC<BreakdownReportScreenProps> = ({
           })}
         </View>
 
-        {/* Optional Notes */}
-        <Text style={styles.label}>Optional Notes & Observations</Text>
-        <TextInput
-          style={styles.textArea}
-          placeholder="Provide additional details regarding the incident or bus location..."
-          placeholderTextColor="#94A3B8"
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-          value={notes}
-          onChangeText={setNotes}
-        />
+        {/* Notes (Optional) */}
+        <Text style={styles.sectionLabel}>Notes (Optional)</Text>
+        <View style={styles.textAreaContainer}>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Add any additional details..."
+            placeholderTextColor="#94A3B8"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            value={notes}
+            onChangeText={setNotes}
+          />
+        </View>
 
-        {/* Action Button */}
+        {/* Send Alert to Admin Button */}
         <TouchableOpacity style={styles.sendAlertBtn} onPress={handleSubmit}>
-          <Send size={20} color={COLORS.white} style={{ marginRight: 8 }} />
           <Text style={styles.sendAlertText}>Send Alert to Admin</Text>
         </TouchableOpacity>
-      </ScrollView>
 
-      {/* Toast Overlay Notification */}
-      <Modal visible={showToast} transparent animationType="fade">
-        <View style={styles.toastOverlay}>
-          <View style={styles.toastCard}>
-            <View style={styles.toastIconCircle}>
-              <BellRing size={28} color={COLORS.white} />
+        {/* Status Confirmation Cards matching exact reference image */}
+        {isAlertSent && (
+          <View style={styles.alertsContainer}>
+            {/* Green Admin Notified Card */}
+            <View style={styles.adminNotifiedCard}>
+              <CheckCircle2 size={20} color="#10B981" style={{ marginRight: 10 }} />
+              <Text style={styles.adminNotifiedText}>
+                Admin notified. Alternative bus being arranged.
+              </Text>
             </View>
-            <Text style={styles.toastTitle}>Breakdown Alert Transmitted</Text>
-            
-            <View style={styles.toastBadgeRow}>
-              <View style={styles.toastBadge}>
-                <CheckCircle2 size={16} color={COLORS.success} />
-                <Text style={styles.toastBadgeText}>Admin Notified</Text>
-              </View>
-              <View style={styles.toastBadge}>
-                <CheckCircle2 size={16} color={COLORS.success} />
-                <Text style={styles.toastBadgeText}>Passengers Auto-Notified</Text>
-              </View>
+
+            {/* Blue Passengers Auto-Notified Card */}
+            <View style={styles.passengersNotifiedCard}>
+              <Info size={20} color={COLORS.primary} style={{ marginRight: 10 }} />
+              <Text style={styles.passengersNotifiedText}>
+                Passengers auto-notified
+              </Text>
             </View>
           </View>
-        </View>
-      </Modal>
+        )}
+
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -155,181 +143,153 @@ export const BreakdownReportScreen: React.FC<BreakdownReportScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backBtn: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: '#F1F5F9',
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 24,
+    paddingBottom: 40,
   },
-  warningBox: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 20,
-    padding: 20,
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    marginBottom: 24,
+    marginBottom: 20,
+    marginTop: 8,
   },
-  warningBoxTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: COLORS.alert,
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  warningBoxDesc: {
-    fontSize: 13,
-    color: '#991B1B',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 10,
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#EF4444',
   },
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 24,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 20,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  locationTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  locationCoords: {
+  locationLabel: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  locationName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
     marginTop: 2,
   },
-  pillRow: {
+  sectionLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  reasonGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
     marginBottom: 20,
   },
-  pillBtn: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 8,
-    marginBottom: 10,
-  },
-  pillBtnSelected: {
-    backgroundColor: COLORS.alert,
-    borderColor: COLORS.alert,
-  },
-  pillBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  pillBtnTextSelected: {
-    color: COLORS.white,
-  },
-  textArea: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 14,
-    padding: 14,
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    marginBottom: 28,
-    minHeight: 100,
-  },
-  sendAlertBtn: {
-    backgroundColor: COLORS.alert,
-    paddingVertical: 18,
+  reasonButton: {
+    width: '48%',
+    height: 52,
     borderRadius: 16,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.alert,
+    marginBottom: 12,
+    borderWidth: 1.5,
+  },
+  selectedReasonBtn: {
+    backgroundColor: '#F0F9FF',
+    borderColor: COLORS.primary,
+  },
+  unselectedReasonBtn: {
+    backgroundColor: COLORS.white,
+    borderColor: '#E2E8F0',
+  },
+  reasonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  selectedReasonText: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  unselectedReasonText: {
+    color: '#64748B',
+  },
+  textAreaContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginBottom: 28,
+  },
+  textArea: {
+    fontSize: 15,
+    color: '#0F172A',
+    minHeight: 90,
+  },
+  sendAlertBtn: {
+    backgroundColor: '#E55353', // Soft red matching reference image
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: '#E55353',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   sendAlertText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
-  toastOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
+  alertsContainer: {
+    marginTop: 8,
   },
-  toastCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 24,
-    width: '100%',
-    alignItems: 'center',
-  },
-  toastIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.alert,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  toastTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 16,
-  },
-  toastBadgeRow: {
-    width: '100%',
-  },
-  toastBadge: {
+  adminNotifiedCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    marginBottom: 8,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
   },
-  toastBadgeText: {
+  adminNotifiedText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#166534',
-    marginLeft: 8,
+    color: '#065F46',
+    flex: 1,
+  },
+  passengersNotifiedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 16,
+    padding: 16,
+  },
+  passengersNotifiedText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0369A1',
+    flex: 1,
   },
 });
