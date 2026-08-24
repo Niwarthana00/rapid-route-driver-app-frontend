@@ -5,311 +5,260 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   SafeAreaView,
+  StatusBar,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   Modal,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { MapPin, Eye, EyeOff, ShieldCheck, ChevronDown, Check } from 'lucide-react-native';
+import {
+  Bus,
+  Lock,
+  Eye,
+  EyeOff,
+  MapPin,
+  CheckCircle,
+  AlertCircle,
+  Phone,
+  User,
+  CreditCard,
+  ChevronDown,
+  Mail,
+} from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useAppState } from '../context/AppStateContext';
 
 export const AuthScreen: React.FC = () => {
-  const { login, signup, setHasLocationPermission } = useAppState();
+  const { login, signup, hasLocationPermission, setHasLocationPermission } = useAppState();
+
   const [isSignUp, setIsSignUp] = useState(false);
 
-  // Login form state
-  const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
+  // Form states (Pre-filled with test credentials)
+  const [identifier, setIdentifier] = useState('driver@rapidroute.com');
+  const [password, setPassword] = useState('Password123!');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Signup form state
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [nic, setNic] = useState('');
-  const [licenseNo, setLicenseNo] = useState('');
+  // Signup extra states
+  const [fullName, setFullName] = useState('Kamal Perera');
+  const [phone, setPhone] = useState('0771234567');
+  const [nic, setNic] = useState('881234567V');
+  const [licenseNo, setLicenseNo] = useState('B9482910');
   const [licenseClass, setLicenseClass] = useState('B (Route Bus)');
-  const [licenseExpiry, setLicenseExpiry] = useState('2028-11-15');
-  const [signupPassword, setSignupPassword] = useState('');
 
-  // Dropdown & Permission Dialog
   const [showClassPicker, setShowClassPicker] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [pendingCallback, setPendingCallback] = useState<(() => void) | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
   const licenseClasses = ['A (Motorcycle)', 'B (Route Bus)', 'C (Heavy Vehicle)', 'D (Trailer)'];
 
-  const handleLoginSubmit = () => {
-    if (!emailInput || !passwordInput) {
-      Alert.alert('Required Fields', 'Please enter your email/phone and password.');
+  const handleContinue = async () => {
+    setFeedbackMsg(null);
+    if (!hasLocationPermission) {
+      setShowPermissionModal(true);
       return;
     }
-    triggerLocationPrompt(login);
-  };
 
-  const handleSignupSubmit = () => {
-    if (!fullName || !phone || !nic || !licenseNo || !signupPassword) {
-      Alert.alert('Required Fields', 'Please fill in all mandatory signup details.');
-      return;
+    setIsSubmitting(true);
+    try {
+      if (!isSignUp) {
+        if (!identifier || !password) {
+          setFeedbackMsg({ text: 'Please enter your email/phone and password', isError: true });
+          return;
+        }
+        const res = await login(identifier, password);
+        if (!res.success && res.message) {
+          setFeedbackMsg({ text: res.message, isError: true });
+        }
+      } else {
+        if (!fullName || !phone || !identifier || !password) {
+          setFeedbackMsg({ text: 'Please fill in all required fields', isError: true });
+          return;
+        }
+        const res = await signup({
+          fullName,
+          phone,
+          email: identifier,
+          password,
+          nicNumber: nic,
+          licenseNumber: licenseNo,
+          licenseClass,
+        });
+        if (!res.success && res.message) {
+          setFeedbackMsg({ text: res.message, isError: true });
+        }
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    triggerLocationPrompt(() => signup({ fullName, phone, email, nic, licenseNo }));
   };
 
-  const triggerLocationPrompt = (authCallback: () => void) => {
-    setPendingCallback(() => authCallback);
-    setShowPermissionModal(true);
-  };
-
-  const acceptLocationPermission = () => {
+  const handleGrantPermission = () => {
     setHasLocationPermission(true);
     setShowPermissionModal(false);
-    if (pendingCallback) {
-      pendingCallback();
-    }
+    handleContinue();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        
-        {!isSignUp ? (
-          /* LOGIN SCREEN matching image style */
-          <View style={styles.contentWrapper}>
-            <Text style={styles.welcomeTitle}>Welcome back</Text>
-            <Text style={styles.welcomeSubtitle}>Enter your email & password to continue</Text>
-
-            {/* Email Field */}
-            <Text style={styles.fieldLabel}>Email or Phone</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.inputField}
-                placeholder="77 123 4567 or driver@smartbus.lk"
-                placeholderTextColor="#94A3B8"
-                value={emailInput}
-                onChangeText={setEmailInput}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Top Brand Logo */}
+          <View style={styles.brandHeader}>
+            <View style={styles.logoBadge}>
+              <Bus size={36} color={COLORS.white} />
             </View>
-
-            {/* Password Field */}
-            <Text style={styles.fieldLabel}>Password</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[styles.inputField, { flex: 1 }]}
-                placeholder="Enter password"
-                placeholderTextColor="#94A3B8"
-                secureTextEntry={!showPassword}
-                value={passwordInput}
-                onChangeText={setPasswordInput}
-              />
-              <TouchableOpacity
-                style={styles.eyeIconBtn}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color={COLORS.textSecondary} />
-                ) : (
-                  <Eye size={20} color={COLORS.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Continue Primary Button */}
-            <TouchableOpacity style={styles.primaryContinueBtn} onPress={handleLoginSubmit}>
-              <Text style={styles.continueBtnText}>Continue</Text>
-            </TouchableOpacity>
-
-            {/* Create New Account Link */}
-            <View style={styles.linkContainer}>
-              <Text style={styles.noAccountText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => setIsSignUp(true)}>
-                <Text style={styles.createAccountLink}>Create new account</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.brandTitle}>SmartBus Driver</Text>
+            <Text style={styles.brandSubtitle}>
+              {isSignUp ? 'Create your driver account' : 'Your route. Your control.'}
+            </Text>
           </View>
-        ) : (
-          /* SIGNUP SCREEN */
-          <View style={styles.contentWrapper}>
-            <Text style={styles.welcomeTitle}>Create account</Text>
-            <Text style={styles.welcomeSubtitle}>Register as an authorized SmartBus Driver</Text>
 
-            <Text style={styles.fieldLabel}>Full Name *</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.inputField}
-                placeholder="Kusum Perera"
-                placeholderTextColor="#94A3B8"
-                value={fullName}
-                onChangeText={setFullName}
-              />
+          {/* Feedback banner */}
+          {feedbackMsg && (
+            <View style={[styles.feedbackBanner, feedbackMsg.isError ? styles.errorBanner : styles.successBanner]}>
+              <AlertCircle size={16} color={feedbackMsg.isError ? '#EF4444' : '#10B981'} style={{ marginRight: 8 }} />
+              <Text style={[styles.feedbackText, { color: feedbackMsg.isError ? '#B91C1C' : '#047857' }]}>
+                {feedbackMsg.text}
+              </Text>
             </View>
+          )}
 
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 6 }}>
-                <Text style={styles.fieldLabel}>Phone Number *</Text>
-                <View style={styles.inputContainer}>
+          {/* Form Card */}
+          <View style={styles.formCard}>
+            {isSignUp && (
+              <>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <View style={styles.inputWrapper}>
+                  <User size={18} color="#94A3B8" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.inputField}
-                    placeholder="0771234567"
-                    keyboardType="phone-pad"
+                    style={styles.textInput}
+                    placeholder="e.g. Kamal Perera"
                     placeholderTextColor="#94A3B8"
+                    value={fullName}
+                    onChangeText={setFullName}
+                  />
+                </View>
+
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <View style={styles.inputWrapper}>
+                  <Phone size={18} color="#94A3B8" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="0771234567"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="phone-pad"
                     value={phone}
                     onChangeText={setPhone}
                   />
                 </View>
-              </View>
 
-              <View style={{ flex: 1, marginLeft: 6 }}>
-                <Text style={styles.fieldLabel}>Email (Optional)</Text>
-                <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Driving License Number</Text>
+                <View style={styles.inputWrapper}>
+                  <CreditCard size={18} color="#94A3B8" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.inputField}
-                    placeholder="driver@smartbus.lk"
-                    keyboardType="email-address"
-                    placeholderTextColor="#94A3B8"
-                    value={email}
-                    onChangeText={setEmail}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 6 }}>
-                <Text style={styles.fieldLabel}>NIC Number *</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="199012345678"
-                    placeholderTextColor="#94A3B8"
-                    value={nic}
-                    onChangeText={setNic}
-                  />
-                </View>
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 6 }}>
-                <Text style={styles.fieldLabel}>License Number *</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="B1234567"
+                    style={styles.textInput}
+                    placeholder="e.g. B9482910"
                     placeholderTextColor="#94A3B8"
                     value={licenseNo}
                     onChangeText={setLicenseNo}
                   />
                 </View>
-              </View>
-            </View>
-
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 6 }}>
-                <Text style={styles.fieldLabel}>License Class</Text>
-                <TouchableOpacity
-                  style={styles.dropdownPicker}
-                  onPress={() => setShowClassPicker(!showClassPicker)}
-                >
-                  <Text style={styles.dropdownText}>{licenseClass}</Text>
-                  <ChevronDown size={18} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 6 }}>
-                <Text style={styles.fieldLabel}>License Expiry</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor="#94A3B8"
-                    value={licenseExpiry}
-                    onChangeText={setLicenseExpiry}
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* License Class Dropdown Options */}
-            {showClassPicker && (
-              <View style={styles.classOptionsCard}>
-                {licenseClasses.map(cls => (
-                  <TouchableOpacity
-                    key={cls}
-                    style={styles.classOptionItem}
-                    onPress={() => {
-                      setLicenseClass(cls);
-                      setShowClassPicker(false);
-                    }}
-                  >
-                    <Text style={styles.classOptionText}>{cls}</Text>
-                    {licenseClass === cls && <Check size={16} color={COLORS.primary} />}
-                  </TouchableOpacity>
-                ))}
-              </View>
+              </>
             )}
 
-            <Text style={styles.fieldLabel}>Password *</Text>
-            <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Email or Phone Number</Text>
+            <View style={styles.inputWrapper}>
+              <Mail size={18} color="#94A3B8" style={styles.inputIcon} />
               <TextInput
-                style={styles.inputField}
-                placeholder="Create strong password"
+                style={styles.textInput}
+                placeholder="driver@rapidroute.com"
                 placeholderTextColor="#94A3B8"
-                secureTextEntry
-                value={signupPassword}
-                onChangeText={setSignupPassword}
+                autoCapitalize="none"
+                value={identifier}
+                onChangeText={setIdentifier}
               />
             </View>
 
-            {/* Primary Register Button */}
-            <TouchableOpacity style={styles.primaryContinueBtn} onPress={handleSignupSubmit}>
-              <Text style={styles.continueBtnText}>Register & Continue</Text>
+            <Text style={styles.inputLabel}>Password</Text>
+            <View style={styles.inputWrapper}>
+              <Lock size={18} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="••••••••"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeBtn}
+              >
+                {showPassword ? (
+                  <EyeOff size={18} color="#94A3B8" />
+                ) : (
+                  <Eye size={18} color="#94A3B8" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.submitButton, isSubmitting && { opacity: 0.8 }]}
+              onPress={handleContinue}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {isSignUp ? 'Create Account' : 'Continue'}
+                </Text>
+              )}
             </TouchableOpacity>
 
-            {/* Back to Login Link */}
-            <View style={styles.linkContainer}>
-              <Text style={styles.noAccountText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => setIsSignUp(false)}>
-                <Text style={styles.createAccountLink}>Log in</Text>
+            {/* Toggle View Link */}
+            <View style={styles.switchAuthRow}>
+              <Text style={styles.switchAuthText}>
+                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+              </Text>
+              <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
+                <Text style={styles.switchAuthLink}>
+                  {isSignUp ? 'Log in' : 'Create new account'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Location Permission Modal */}
-      <Modal
-        visible={showPermissionModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowPermissionModal(false)}
-      >
+      <Modal visible={showPermissionModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.permissionCard}>
-            <View style={styles.locationIconBadge}>
+            <View style={styles.permissionIconCircle}>
               <MapPin size={32} color={COLORS.primary} />
             </View>
             <Text style={styles.permissionTitle}>Allow Location Access</Text>
-            <Text style={styles.permissionDesc}>
-              SmartBus Driver requires continuous foreground & background location access while on an active trip to broadcast live bus positions to passengers waiting at stops.
+            <Text style={styles.permissionBody}>
+              SmartBus Driver requires your background location to broadcast live bus tracking and
+              manage halt arrivals for passengers.
             </Text>
-
             <TouchableOpacity
-              style={styles.allowBtn}
-              onPress={acceptLocationPermission}
+              style={styles.grantButton}
+              onPress={handleGrantPermission}
             >
-              <ShieldCheck size={20} color={COLORS.white} style={{ marginRight: 8 }} />
-              <Text style={styles.allowBtnText}>Grant Location Permission</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.denyBtn}
-              onPress={() => {
-                setShowPermissionModal(false);
-                if (pendingCallback) pendingCallback();
-              }}
-            >
-              <Text style={styles.denyBtnText}>Skip for Now</Text>
+              <Text style={styles.grantButtonText}>Grant & Continue</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -325,117 +274,129 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingVertical: 36,
-    flexGrow: 1,
-    justifyContent: 'center',
+    paddingTop: 40,
+    paddingBottom: 40,
   },
-  contentWrapper: {
-    width: '100%',
-  },
-  welcomeTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 6,
-  },
-  welcomeSubtitle: {
-    fontSize: 15,
-    color: '#64748B',
+  brandHeader: {
+    alignItems: 'center',
     marginBottom: 28,
   },
-  fieldLabel: {
+  logoBadge: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: COLORS.primary, // #0E86D4
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  brandTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  brandSubtitle: {
+    fontSize: 15,
+    color: '#64748B',
+  },
+  feedbackBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  successBanner: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#6EE7B7',
+  },
+  feedbackText: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  formCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  inputLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: '#334155',
     marginBottom: 6,
-    marginTop: 10,
+    marginTop: 8,
   },
-  inputContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 54,
-    marginBottom: 8,
-  },
-  inputField: {
-    fontSize: 15,
-    color: '#0F172A',
-    width: '100%',
-  },
-  eyeIconBtn: {
-    position: 'absolute',
-    right: 16,
-  },
-  dropdownPicker: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  dropdownText: {
-    fontSize: 14,
-    color: '#0F172A',
-  },
-  classOptionsCard: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 8,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 52,
     marginBottom: 12,
   },
-  classOptionItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 8,
+  inputIcon: {
+    marginRight: 10,
   },
-  classOptionText: {
-    fontSize: 14,
+  textInput: {
+    flex: 1,
+    fontSize: 15,
     color: '#0F172A',
   },
-  row: {
-    flexDirection: 'row',
+  eyeBtn: {
+    padding: 6,
   },
-  primaryContinueBtn: {
+  submitButton: {
     backgroundColor: COLORS.primary, // #0E86D4
     height: 54,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 18,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 3,
   },
-  continueBtnText: {
+  submitButtonText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
-  linkContainer: {
+  switchAuthRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
+    alignItems: 'center',
+    marginTop: 20,
   },
-  noAccountText: {
+  switchAuthText: {
     fontSize: 14,
     color: '#64748B',
   },
-  createAccountLink: {
+  switchAuthLink: {
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.primary,
@@ -454,7 +415,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  locationIconBadge: {
+  permissionIconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
@@ -465,38 +426,28 @@ const styles = StyleSheet.create({
   },
   permissionTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 8,
   },
-  permissionDesc: {
+  permissionBody: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
   },
-  allowBtn: {
+  grantButton: {
     backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
+    height: 50,
     borderRadius: 14,
     width: '100%',
-    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  allowBtnText: {
+  grantButtonText: {
     color: COLORS.white,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-  },
-  denyBtn: {
-    paddingVertical: 10,
-  },
-  denyBtnText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
