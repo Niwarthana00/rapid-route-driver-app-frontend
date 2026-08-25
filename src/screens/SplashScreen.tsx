@@ -3,9 +3,9 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bus } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 

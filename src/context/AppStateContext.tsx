@@ -52,7 +52,9 @@ interface AppStateContextType {
   passengersToday: number;
   fuelLoggedToday: number;
   tripStatus: 'idle' | 'halts_review' | 'active' | 'breakdown' | 'completed';
+  tripStartTime: Date | null;
   tripElapsedTime: string;
+  tripDurationMinutes: number;
   activeTripId: string;
   currentHaltIndex: number;
   halts: HaltItem[];
@@ -88,7 +90,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
+  const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(true);
 
   // Driver and Vehicle Details
   const [driverName, setDriverName] = useState('Kamal Perera');
@@ -99,13 +101,38 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [vehicleModel, setVehicleModel] = useState('Leyland Viking 2022');
 
   // Dashboard & Active Trip State
-  const [activeRoute, setActiveRoute] = useState('Route 138');
-  const [activeRouteName, setActiveRouteName] = useState('Pettah - Maharagama / Kottawa');
-  const [passengersToday, setPassengersToday] = useState(42);
-  const [fuelLoggedToday, setFuelLoggedToday] = useState(42.5);
-  const [activeTripId, setActiveTripId] = useState<string>('trip-active-01');
+  const [activeRouteId, setActiveRouteId] = useState<string>('');
+  const [activeRoute, setActiveRoute] = useState<string>('Select Route');
+  const [activeRouteName, setActiveRouteName] = useState<string>('No Active Route');
+  const [passengersToday, setPassengersToday] = useState(0);
+  const [fuelLoggedToday, setFuelLoggedToday] = useState(0);
+  const [activeTripId, setActiveTripId] = useState<string>('');
   const [tripStatus, setTripStatus] = useState<'idle' | 'halts_review' | 'active' | 'breakdown' | 'completed'>('idle');
-  const [tripElapsedTime, setTripElapsedTime] = useState('00:42:15');
+  const [tripStartTime, setTripStartTime] = useState<Date | null>(null);
+  const [tripElapsedTime, setTripElapsedTime] = useState('00:00:00');
+  const [tripDurationMinutes, setTripDurationMinutes] = useState(0);
+
+  // Live Stopwatch Timer when trip is active
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (tripStatus === 'active' && tripStartTime) {
+      interval = setInterval(() => {
+        const now = new Date();
+        const diffMs = now.getTime() - tripStartTime.getTime();
+        const totalSecs = Math.floor(diffMs / 1000);
+        const hours = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+        setTripDurationMinutes(Math.max(1, Math.floor(totalSecs / 60)));
+        setTripElapsedTime(
+          `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+        );
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [tripStatus, tripStartTime]);
 
   // Halts
   const [currentHaltIndex, setCurrentHaltIndex] = useState(0);
@@ -160,6 +187,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
         if (d.active_trip) {
           setActiveTripId(d.active_trip.trip_id);
+          setActiveRouteId((d.active_trip as any).route_id || d.active_trip.route_number);
           setActiveRoute(`Route ${d.active_trip.route_number}`);
           setActiveRouteName(d.active_trip.route_name);
           if (d.active_trip.status === 'IN_PROGRESS') {
@@ -377,8 +405,11 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const confirmStartTrip = async () => {
     setTripStatus('active');
+    setTripStartTime(new Date());
+    setTripElapsedTime('00:00:00');
     try {
-      const res = await DriverApiService.startTrip('route-138');
+      const routeToStart = activeRouteId || 'route-138';
+      const res = await DriverApiService.startTrip(routeToStart);
       if (res?.data?.trip_id) {
         setActiveTripId(res.data.trip_id);
       }
@@ -503,7 +534,9 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         fuelLoggedToday,
         activeTripId,
         tripStatus,
+        tripStartTime,
         tripElapsedTime,
+        tripDurationMinutes,
         currentHaltIndex,
         halts,
         documents,

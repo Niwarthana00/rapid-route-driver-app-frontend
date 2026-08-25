@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
 import { Home, Navigation, FileText, Fuel, LogOut } from 'lucide-react-native';
@@ -263,7 +263,7 @@ function MainAppContent() {
   );
 }
 
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 
 export default function App() {
   return (
