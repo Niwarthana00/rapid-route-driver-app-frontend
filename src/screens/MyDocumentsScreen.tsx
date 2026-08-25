@@ -5,9 +5,9 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   AlertTriangle,
   FileText,

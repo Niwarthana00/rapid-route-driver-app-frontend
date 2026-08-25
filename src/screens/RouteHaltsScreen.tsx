@@ -5,10 +5,10 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Modal,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Edit2, Play, Check } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useAppState } from '../context/AppStateContext';

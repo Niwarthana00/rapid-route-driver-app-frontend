@@ -5,7 +5,6 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ScrollView,
   KeyboardAvoidingView,
@@ -13,6 +12,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Bus,
   Lock,
@@ -35,16 +35,16 @@ export const AuthScreen: React.FC = () => {
 
   const [isSignUp, setIsSignUp] = useState(false);
 
-  // Form states (Pre-filled with test credentials)
-  const [identifier, setIdentifier] = useState('driver@rapidroute.com');
-  const [password, setPassword] = useState('Password123!');
+  // Form states (Clean empty inputs for real user entry)
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   // Signup extra states
-  const [fullName, setFullName] = useState('Kamal Perera');
-  const [phone, setPhone] = useState('0771234567');
-  const [nic, setNic] = useState('881234567V');
-  const [licenseNo, setLicenseNo] = useState('B9482910');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [nic, setNic] = useState('');
+  const [licenseNo, setLicenseNo] = useState('');
   const [licenseClass, setLicenseClass] = useState('B (Route Bus)');
 
   const [showClassPicker, setShowClassPicker] = useState(false);
@@ -56,11 +56,6 @@ export const AuthScreen: React.FC = () => {
 
   const handleContinue = async () => {
     setFeedbackMsg(null);
-    if (!hasLocationPermission) {
-      setShowPermissionModal(true);
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       if (!isSignUp) {

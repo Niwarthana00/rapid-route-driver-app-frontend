@@ -5,8 +5,8 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   CheckCircle2,
   AlertCircle,
@@ -31,11 +31,17 @@ export const TripCompletedScreen: React.FC<TripCompletedScreenProps> = ({ onDone
     totalFuelToday,
     totalRepairToday,
     documents,
+    halts,
+    tripStartTime,
   } = useAppState();
 
   const expiringDoc = documents.find(d => d.status === 'warning' || d.status === 'expired');
-
   const totalCost = totalFuelToday + totalRepairToday;
+
+  const startFormatted = tripStartTime
+    ? tripStartTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    : '06:00 AM';
+  const endFormatted = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -58,15 +64,15 @@ export const TripCompletedScreen: React.FC<TripCompletedScreenProps> = ({ onDone
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Duration</Text>
             <View style={styles.durationValueRow}>
-              <Text style={styles.statValue}>06:00 AM</Text>
+              <Text style={styles.statValue}>{startFormatted}</Text>
               <View style={styles.timeDivider} />
-              <Text style={styles.statValue}>07:25 AM</Text>
+              <Text style={styles.statValue}>{endFormatted}</Text>
             </View>
           </View>
 
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Halts Completed</Text>
-            <Text style={styles.statValue}>7 / 7</Text>
+            <Text style={styles.statValue}>{halts.length} / {halts.length}</Text>
           </View>
 
           <View style={styles.statRow}>

@@ -5,9 +5,9 @@ import {
   View,
   TouchableOpacity,
   Dimensions,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bus, MapPin, ShieldAlert, Fuel, ArrowRight, CheckCircle2 } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';

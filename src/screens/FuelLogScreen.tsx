@@ -5,10 +5,10 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Modal,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Fuel,
   Wrench,
