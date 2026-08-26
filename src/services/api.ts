@@ -27,7 +27,11 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const message = error.response?.data?.message || error.message || 'Network error or server unavailable';
+    const resData = error.response?.data;
+    const errDetails = resData?.errors ? JSON.stringify(resData.errors) : resData?.error ? JSON.stringify(resData.error) : '';
+    const message = resData?.message
+      ? `${resData.message} ${errDetails}`.trim()
+      : error.message || 'Network error or server unavailable';
     return Promise.reject(new Error(message));
   }
 );

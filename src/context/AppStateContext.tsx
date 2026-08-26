@@ -79,6 +79,7 @@ interface AppStateContextType {
   addCostLog: (log: Omit<CostItem, 'id'>) => Promise<void>;
   updateHaltName: (haltId: string, newName: string) => Promise<void>;
   updateProfileDetails: (name: string, phone: string) => Promise<{ success: boolean; message?: string }>;
+  uploadDocument: (payload: { document_type: string; expires_at: string; file_url?: string; category: string }) => Promise<{ success: boolean; message?: string }>;
   finishTrip: () => Promise<any>;
 }
 
@@ -92,18 +93,18 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(true);
 
-  // Driver and Vehicle Details
-  const [driverName, setDriverName] = useState('Kamal Perera');
-  const [driverPhone, setDriverPhone] = useState('0771234567');
-  const [driverEmail, setDriverEmail] = useState('driver@rapidroute.com');
-  const [driverLicenseNo, setDriverLicenseNo] = useState('B9482910');
-  const [vehicleNo, setVehicleNo] = useState('ND-4829');
-  const [vehicleModel, setVehicleModel] = useState('Leyland Viking 2022');
+  // Driver and Vehicle Details (Populated dynamically from backend / DB)
+  const [driverName, setDriverName] = useState('');
+  const [driverPhone, setDriverPhone] = useState('');
+  const [driverEmail, setDriverEmail] = useState('');
+  const [driverLicenseNo, setDriverLicenseNo] = useState('');
+  const [vehicleNo, setVehicleNo] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
 
   // Dashboard & Active Trip State
   const [activeRouteId, setActiveRouteId] = useState<string>('');
-  const [activeRoute, setActiveRoute] = useState<string>('Select Route');
-  const [activeRouteName, setActiveRouteName] = useState<string>('No Active Route');
+  const [activeRoute, setActiveRoute] = useState<string>('No Active Route');
+  const [activeRouteName, setActiveRouteName] = useState<string>('');
   const [passengersToday, setPassengersToday] = useState(0);
   const [fuelLoggedToday, setFuelLoggedToday] = useState(0);
   const [activeTripId, setActiveTripId] = useState<string>('');
@@ -134,37 +135,19 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [tripStatus, tripStartTime]);
 
-  // Halts
+  // Halts (Loaded dynamically from database)
   const [currentHaltIndex, setCurrentHaltIndex] = useState(0);
-  const [halts, setHalts] = useState<HaltItem[]>([
-    { id: 'halt-01', name: 'Pettah Main Stand', sequenceNo: 1, completed: false, waitingCount: 12, dropCount: 0, distanceKm: 0, etaMin: 0, latitude: 6.9344, longitude: 79.8503 },
-    { id: 'halt-02', name: 'Town Hall', sequenceNo: 2, completed: false, waitingCount: 8, dropCount: 4, distanceKm: 1.8, etaMin: 6, latitude: 6.9147, longitude: 79.8653 },
-    { id: 'halt-03', name: 'Borella Junction', sequenceNo: 3, completed: false, waitingCount: 15, dropCount: 6, distanceKm: 3.2, etaMin: 12, latitude: 6.9142, longitude: 79.8778 },
-    { id: 'halt-04', name: 'Nugegoda Flyover', sequenceNo: 4, completed: false, waitingCount: 5, dropCount: 3, distanceKm: 5.4, etaMin: 18, latitude: 6.8711, longitude: 79.8885 },
-    { id: 'halt-05', name: 'Delkanda', sequenceNo: 5, completed: false, waitingCount: 9, dropCount: 5, distanceKm: 7.2, etaMin: 24, latitude: 6.8592, longitude: 79.8973 },
-    { id: 'halt-06', name: 'Maharagama Clock Tower', sequenceNo: 6, completed: false, waitingCount: 11, dropCount: 8, distanceKm: 9.8, etaMin: 32, latitude: 6.8481, longitude: 79.9265 },
-    { id: 'halt-07', name: 'Pannipitiya', sequenceNo: 7, completed: false, waitingCount: 7, dropCount: 4, distanceKm: 12.1, etaMin: 40, latitude: 6.8415, longitude: 79.9451 },
-    { id: 'halt-08', name: 'Kottawa Stand', sequenceNo: 8, completed: false, waitingCount: 0, dropCount: 22, distanceKm: 15.0, etaMin: 50, latitude: 6.8411, longitude: 79.9678 },
-  ]);
+  const [halts, setHalts] = useState<HaltItem[]>([]);
 
-  // Documents
-  const [documents, setDocuments] = useState<DocumentItem[]>([
-    { id: 'doc-drv-01', name: 'Heavy Driving License', category: 'driver', status: 'warning', expiryDate: '2026-08-27', daysRemaining: 2 },
-    { id: 'doc-veh-01', name: 'Revenue License', category: 'vehicle', status: 'valid', expiryDate: '2026-09-08', daysRemaining: 14 },
-    { id: 'doc-veh-02', name: 'Passenger Service Permit', category: 'vehicle', status: 'valid', expiryDate: '2026-11-30', daysRemaining: 96 },
-    { id: 'doc-veh-03', name: 'Commercial Vehicle Insurance', category: 'vehicle', status: 'valid', expiryDate: '2026-10-15', daysRemaining: 51 },
-  ]);
+  // Documents (Loaded dynamically from database)
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
 
-  // Costs
-  const [costs, setCosts] = useState<CostItem[]>([
-    { id: 'maint-01', type: 'FUEL', date: 'May 25, 2026', amount: 9450, liters: 42.5, stationOrDescription: 'Ceypetco Filling Station - Maharagama' },
-    { id: 'maint-02', type: 'FUEL', date: 'May 24, 2026', amount: 8820, liters: 40, stationOrDescription: 'Kottawa Fuel Station' },
-    { id: 'maint-03', type: 'REPAIR', date: 'May 22, 2026', amount: 3500, stationOrDescription: 'Headlight Bulb & Fuse Replacement' },
-  ]);
+  // Costs (Loaded dynamically from database)
+  const [costs, setCosts] = useState<CostItem[]>([]);
 
-  const [totalFuelToday, setTotalFuelToday] = useState(9450);
+  const [totalFuelToday, setTotalFuelToday] = useState(0);
   const [totalRepairToday, setTotalRepairToday] = useState(0);
-  const [totalFuelMonth, setTotalFuelMonth] = useState(43200);
+  const [totalFuelMonth, setTotalFuelMonth] = useState(0);
 
   // Sync with real backend dashboard
   const refreshDashboard = useCallback(async () => {
@@ -174,8 +157,8 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (res?.success && res.data) {
         const d = res.data;
         if (d.summary) {
-          setPassengersToday(d.summary.today_passengers ?? 42);
-          setFuelLoggedToday(d.summary.today_fuel_liters ?? 42.5);
+          setPassengersToday(d.summary.today_passengers ?? 0);
+          setFuelLoggedToday(d.summary.today_fuel_liters ?? 0);
         }
         if (d.driver) {
           setDriverName(d.driver.name);
@@ -199,7 +182,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       }
     } catch (err) {
-      console.log('Backend dashboard sync fallback:', err);
+      console.log('Backend dashboard sync error:', err);
     } finally {
       setIsSyncing(false);
     }
@@ -221,7 +204,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setDocuments(mapped);
       }
     } catch (err) {
-      console.log('Backend documents sync fallback:', err);
+      console.log('Backend documents sync error:', err);
     }
   }, []);
 
@@ -236,7 +219,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const mapped = res.data.recent_logs.map((log: any) => ({
             id: log.maintenance_id || `maint_${Math.random()}`,
             type: (log.maintenance_type === 'REPAIR' ? 'REPAIR' : 'FUEL') as 'FUEL' | 'REPAIR',
-            date: log.logged_at ? new Date(log.logged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'May 25, 2026',
+            date: log.logged_at ? new Date(log.logged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString(),
             amount: parseFloat(log.amount) || 0,
             liters: log.liters ? parseFloat(log.liters) : undefined,
             stationOrDescription: log.description || 'Expense Entry',
@@ -245,35 +228,47 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       }
     } catch (err) {
-      console.log('Backend costs sync fallback:', err);
+      console.log('Backend costs sync error:', err);
     }
   }, []);
 
   // Sync halts from backend
   const refreshHalts = useCallback(async () => {
     try {
+      setIsSyncing(true);
       const res = await DriverApiService.getActiveTripHalts();
-      if (res?.success && res.data?.halts) {
-        setActiveTripId(res.data.trip_id || activeTripId);
-        if (typeof res.data.current_halt_index === 'number') {
-          setCurrentHaltIndex(res.data.current_halt_index);
+      if (res?.success && res.data) {
+        const d = res.data;
+        if (d.trip_id) setActiveTripId(d.trip_id);
+        if (d.route_id) setActiveRouteId(d.route_id);
+        if ((d as any).route_number) setActiveRoute(`Route ${(d as any).route_number}`);
+        if ((d as any).route_name) setActiveRouteName((d as any).route_name);
+
+        if (typeof d.current_halt_index === 'number') {
+          setCurrentHaltIndex(d.current_halt_index);
         }
-        const mapped = res.data.halts.map((h: any, idx: number) => ({
-          id: h.halt_id || `h_${idx}`,
-          name: h.name || `Halt ${idx + 1}`,
-          sequenceNo: h.sequence_no || idx + 1,
-          completed: idx < (res.data.current_halt_index || 0),
-          waitingCount: 6 + (idx % 5),
-          dropCount: idx > 0 ? 3 + (idx % 4) : 0,
-          distanceKm: idx * 1.8,
-          etaMin: idx * 6,
-          latitude: h.latitude,
-          longitude: h.longitude,
-        }));
-        setHalts(mapped);
+
+        if (Array.isArray(d.halts) && d.halts.length > 0) {
+          const mapped: HaltItem[] = d.halts.map((h: any, idx: number) => ({
+            id: h.halt_id || h.id || `h_${idx}`,
+            name: h.name || h.halt_name || `Halt ${idx + 1}`,
+            sequenceNo: h.sequence_no ?? h.sequenceNo ?? h.sequence_order ?? idx + 1,
+            completed: typeof d.current_halt_index === 'number' ? idx < d.current_halt_index : false,
+            waitingCount: h.waiting_passengers ?? h.waitingCount ?? (4 + (idx % 4)),
+            dropCount: h.drop_passengers ?? h.dropCount ?? (idx > 0 ? 2 + (idx % 3) : 0),
+            distanceKm: parseFloat(h.distance_km ?? h.distanceKm ?? (idx * 1.8)),
+            etaMin: parseInt(h.eta_min ?? h.etaMin ?? h.travel_time_from_origin_mins ?? (idx * 6), 10),
+            latitude: h.latitude ? parseFloat(h.latitude) : undefined,
+            longitude: h.longitude ? parseFloat(h.longitude) : undefined,
+            scheduledTime: h.scheduled_time || h.scheduledTime || undefined,
+          }));
+          setHalts(mapped);
+        }
       }
     } catch (err) {
       console.log('Backend halts sync fallback:', err);
+    } finally {
+      setIsSyncing(false);
     }
   }, [activeTripId]);
 
@@ -325,10 +320,11 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const login = async (identifier?: string, password?: string): Promise<{ success: boolean; message?: string }> => {
-    const loginId = identifier || 'driver@rapidroute.com';
-    const loginPass = password || 'Password123!';
+    if (!identifier || !password) {
+      return { success: false, message: 'Please enter your email/phone and password' };
+    }
     try {
-      const res = await DriverApiService.login(loginId, loginPass);
+      const res = await DriverApiService.login(identifier, password);
       if (res?.success && res.data?.token) {
         const prof = res.data.profile;
         const veh = res.data.assigned_vehicle;
@@ -342,59 +338,71 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
         setIsAuthenticated(true);
         await saveAuthSession(true, prof?.name, prof?.phone, prof?.email, res.data.token);
-        // Refresh live dashboard data
-        refreshDashboard();
-        refreshDocuments();
-        refreshCosts();
+        // Refresh all live driver data
+        await Promise.all([
+          refreshDashboard(),
+          refreshDocuments(),
+          refreshCosts(),
+          refreshHalts(),
+        ]);
         return { success: true, message: res.message || 'Login successful' };
       }
+      return { success: false, message: res?.message || 'Login failed' };
     } catch (err: any) {
-      console.log('Live login attempt:', err.message);
-      // Fallback for offline demo credentials
-      if (loginId === 'driver@rapidroute.com' || loginId === '0771234567') {
-        setIsAuthenticated(true);
-        await saveAuthSession(true, 'Kamal Perera', '0771234567', 'driver@rapidroute.com');
-        return { success: true, message: 'Logged in (Demo Mode)' };
-      }
+      console.log('Backend login error:', err.message);
       return { success: false, message: err.message || 'Invalid credentials' };
     }
-    setIsAuthenticated(true);
-    await saveAuthSession(true);
-    return { success: true };
   };
 
   const signup = async (details: any): Promise<{ success: boolean; message?: string }> => {
-    const name = details.fullName || details.name || driverName;
-    const phoneStr = details.phone || driverPhone;
-    const emailStr = details.email || driverEmail;
+    const name = details.fullName || details.name;
+    const phoneStr = details.phone;
+    const emailStr = details.email;
     try {
       const res = await DriverApiService.register({
         name,
         email: emailStr,
         password: details.password || 'Password123!',
         phone: phoneStr,
-        nic_number: details.nicNumber || '881234567V',
-        license_number: details.licenseNumber || 'B9482910',
-        license_class: 'Heavy Vehicle (Class A/B)',
-        license_expiry: '2026-08-27',
+        nic_number: details.nicNumber || '199600000001',
+        license_number: details.licenseNumber || 'B1000001',
+        license_class: details.licenseClass || 'Heavy Vehicle (Class A/B)',
+        license_expiry: details.licenseExpiry || '2027-01-01',
       });
-      if (details.fullName || details.name) setDriverName(name);
-      if (details.phone) setDriverPhone(phoneStr);
-      setIsAuthenticated(true);
-      await saveAuthSession(true, name, phoneStr, emailStr, res?.data?.token);
-      return { success: true, message: res?.message || 'Registered successfully' };
+      if (res?.success && res.data?.token) {
+        setDriverName(name);
+        setDriverPhone(phoneStr);
+        setDriverEmail(emailStr);
+        setIsAuthenticated(true);
+        await saveAuthSession(true, name, phoneStr, emailStr, res.data.token);
+        await Promise.all([
+          refreshDashboard(),
+          refreshDocuments(),
+          refreshCosts(),
+          refreshHalts(),
+        ]);
+        return { success: true, message: res.message || 'Registered successfully' };
+      }
+      return { success: false, message: res?.message || 'Registration failed' };
     } catch (err: any) {
-      console.log('Online signup fallback:', err.message);
-      if (details.fullName || details.name) setDriverName(name);
-      if (details.phone) setDriverPhone(phoneStr);
-      setIsAuthenticated(true);
-      await saveAuthSession(true, name, phoneStr, emailStr);
-      return { success: true, message: 'Account created' };
+      console.log('Backend signup error:', err.message);
+      return { success: false, message: err.message || 'Could not create account' };
     }
   };
 
   const logout = () => {
     setIsAuthenticated(false);
+    setDriverName('');
+    setDriverPhone('');
+    setDriverEmail('');
+    setDriverLicenseNo('');
+    setVehicleNo('');
+    setVehicleModel('');
+    setHalts([]);
+    setDocuments([]);
+    setCosts([]);
+    setActiveTripId('');
+    setTripStatus('idle');
     AsyncStorage.multiRemove([AUTH_STORAGE_KEY, 'userToken']).catch(console.error);
   };
 
@@ -413,8 +421,22 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (res?.data?.trip_id) {
         setActiveTripId(res.data.trip_id);
       }
-    } catch (err) {
-      console.log('Backend startTrip offline fallback:', err);
+    } catch (err: any) {
+      console.log('Backend startTrip error:', err.message);
+      // If trip already exists today (unique constraint), fetch active trip id from DB
+      try {
+        const haltsRes = await DriverApiService.getActiveTripHalts();
+        if (haltsRes?.data?.trip_id) {
+          setActiveTripId(haltsRes.data.trip_id);
+        } else {
+          const dashRes = await DriverApiService.getDashboard();
+          if (dashRes?.data?.active_trip?.trip_id) {
+            setActiveTripId(dashRes.data.active_trip.trip_id);
+          }
+        }
+      } catch (fetchErr) {
+        console.log('Failed to fetch existing active trip:', fetchErr);
+      }
     }
   };
 
@@ -426,15 +448,44 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (currentHaltIndex < halts.length - 1) {
       setCurrentHaltIndex(prev => prev + 1);
     }
-    try {
-      await DriverApiService.completeHalt({
-        trip_id: activeTripId,
-        halt_id: haltId,
-        sequence_no: current ? current.sequenceNo : currentHaltIndex + 1,
-        boarded_passengers: current ? current.waitingCount : 6,
-      });
-    } catch (err) {
-      console.log('Backend completeHalt offline fallback:', err);
+
+    let targetTripId = activeTripId;
+    if (!targetTripId) {
+      try {
+        const hRes = await DriverApiService.getActiveTripHalts();
+        if (hRes?.data?.trip_id) {
+          targetTripId = hRes.data.trip_id;
+          setActiveTripId(targetTripId);
+        } else {
+          const dashRes = await DriverApiService.getDashboard();
+          if (dashRes?.data?.active_trip?.trip_id) {
+            targetTripId = dashRes.data.active_trip.trip_id;
+            setActiveTripId(targetTripId);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const currentSeqNo = current ? (current.sequenceNo || currentHaltIndex + 1) : currentHaltIndex + 1;
+    const currentWaiting = current ? (current.waitingCount || 0) : 0;
+
+    console.log(`[DriverApp] Calling completeHalt: trip_id=${targetTripId}, halt_id=${haltId}, sequence_no=${currentSeqNo}`);
+
+    if (targetTripId && haltId) {
+      try {
+        await DriverApiService.completeHalt({
+          trip_id: targetTripId,
+          halt_id: haltId,
+          sequence_no: Number(currentSeqNo),
+          boarded_passengers: Number(currentWaiting),
+        });
+      } catch (err: any) {
+        console.log('Backend completeHalt error:', err.message);
+      }
+    } else {
+      console.log('[DriverApp] Cannot complete halt on backend: missing trip_id or halt_id', { targetTripId, haltId });
     }
   };
 
@@ -443,27 +494,30 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const res = await DriverApiService.reportBreakdown({
         reason,
-        location: halts[currentHaltIndex]?.name || 'Rajagiriya Junction, Colombo',
+        location: halts[currentHaltIndex]?.name || 'Current Trip Location',
         notes,
-        trip_id: activeTripId,
+        trip_id: activeTripId || undefined,
       });
       return { success: true, message: res?.message || 'Emergency breakdown alert sent successfully' };
     } catch (err: any) {
-      console.log('Backend breakdown offline fallback:', err);
-      return { success: true, message: 'Alert broadcasted to admin and passengers' };
+      console.log('Backend breakdown error:', err.message);
+      return { success: false, message: err.message || 'Failed to report breakdown' };
     }
   };
 
   const finishTrip = async () => {
     setTripStatus('completed');
-    try {
-      const res = await DriverApiService.finishTrip(activeTripId);
-      refreshDashboard();
-      return res?.data;
-    } catch (err) {
-      console.log('Backend finishTrip offline fallback:', err);
-      return null;
+    if (activeTripId) {
+      try {
+        const res = await DriverApiService.finishTrip(activeTripId);
+        refreshDashboard();
+        return res?.data;
+      } catch (err: any) {
+        console.log('Backend finishTrip error:', err.message);
+        return null;
+      }
     }
+    return null;
   };
 
   const addCostLog = async (log: Omit<CostItem, 'id'>) => {
@@ -516,6 +570,23 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const uploadDocument = async (payload: { document_type: string; expires_at: string; file_url?: string; category: string }): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await DriverApiService.uploadDocument({
+        document_type: payload.document_type,
+        expires_at: payload.expires_at,
+        file_url: payload.file_url || 'https://rapidroute.com/docs/uploaded_doc.pdf',
+        category: payload.category,
+      });
+      await refreshDocuments();
+      await refreshDashboard();
+      return { success: true, message: res?.message || 'Document uploaded successfully' };
+    } catch (err: any) {
+      console.log('Backend uploadDocument error:', err.message);
+      return { success: false, message: err.message || 'Failed to upload document' };
+    }
+  };
+
   return (
     <AppStateContext.Provider
       value={{
@@ -561,6 +632,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addCostLog,
         updateHaltName,
         updateProfileDetails,
+        uploadDocument,
       }}
     >
       {children}

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -33,28 +34,58 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 }) => {
   const {
     driverName,
+    driverPhone,
+    vehicleNo,
+    vehicleModel,
     activeRoute,
     activeRouteName,
     passengersToday,
     fuelLoggedToday,
     documents,
     tripStatus,
+    refreshDashboard,
+    refreshDocuments,
+    refreshCosts,
   } = useAppState();
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    refreshDashboard();
+    refreshDocuments();
+    refreshCosts();
+  }, [refreshDashboard, refreshDocuments, refreshCosts]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      refreshDashboard(),
+      refreshDocuments(),
+      refreshCosts(),
+    ]);
+    setRefreshing(false);
+  };
 
   const expiringDoc = documents.find(d => d.status === 'warning' || d.status === 'expired');
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
+      >
         {/* Header Greeting */}
         <View style={styles.header}>
-          <Text style={styles.greetingTitle}>Good morning, {driverName.split(' ')[0]}</Text>
+          <Text style={styles.greetingTitle}>Good morning, {driverName ? driverName.split(' ')[0] : 'Driver'}</Text>
         </View>
 
         {/* Assigned Route Card */}
         <View style={styles.routeCard}>
           <View style={styles.routeHeaderRow}>
-            <Text style={styles.routeCode}>{activeRoute}</Text>
+            <Text style={styles.routeCode}>{activeRoute || 'No Active Route'}</Text>
             <View style={styles.statusBadge}>
               <Text style={styles.statusBadgeText}>
                 {tripStatus === 'active' ? 'Trip Active' : 'Trip Not Started'}
@@ -64,11 +95,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
           <View style={styles.routeDetailsRow}>
             <Text style={styles.routeLocationText}>
-              {activeRouteName.split(' to ')[0]}
+              {activeRouteName ? activeRouteName.split(' to ')[0] : 'Origin'}
             </Text>
             <View style={styles.locationDivider} />
             <Text style={styles.routeLocationText}>
-              {activeRouteName.split(' to ')[1] || 'Kottawa'}
+              {activeRouteName ? (activeRouteName.split(' to ')[1] || 'Destination') : 'Destination'}
             </Text>
           </View>
         </View>
@@ -91,9 +122,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
           {/* Days to Expiry */}
           <View style={styles.kpiCard}>
-            <FileText size={24} color="#F59E0B" style={{ marginBottom: 12 }} />
-            <Text style={styles.kpiValue}>18</Text>
-            <Text style={styles.kpiLabel}>Days to Expiry</Text>
+            <FileText size={24} color={expiringDoc?.status === 'warning' ? '#F59E0B' : COLORS.primary} style={{ marginBottom: 12 }} />
+            <Text style={styles.kpiValue}>{expiringDoc?.daysRemaining ?? (documents.length > 0 ? '0' : '-')}</Text>
+            <Text style={styles.kpiLabel}>{expiringDoc?.status === 'warning' ? 'Days to Expiry' : 'Doc Warnings'}</Text>
           </View>
         </View>
 
@@ -116,7 +147,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
         {/* Bottom Extra Information Section */}
         <View style={styles.extraSection}>
-          <Text style={styles.sectionHeading}>Today's Schedule Summary</Text>
+          <Text style={styles.sectionHeading}>Vehicle & Shift Summary</Text>
 
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
@@ -124,8 +155,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 <Clock size={18} color={COLORS.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.summaryTitle}>First Shift: 06:00 AM Departure</Text>
-                <Text style={styles.summarySubtitle}>Pettah Depot to Kottawa Central</Text>
+                <Text style={styles.summaryTitle}>{activeRoute || 'Current Schedule'}</Text>
+                <Text style={styles.summarySubtitle}>{activeRouteName || 'Assigned Bus Route'}</Text>
               </View>
             </View>
 
@@ -136,8 +167,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 <ShieldCheck size={18} color="#166534" />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.summaryTitle}>Vehicle Pre-Check Verified</Text>
-                <Text style={styles.summarySubtitle}>NB-4592 AC Bus • Fuel 85%</Text>
+                <Text style={styles.summaryTitle}>Assigned Vehicle</Text>
+                <Text style={styles.summarySubtitle}>{vehicleNo ? `${vehicleNo} • ${vehicleModel}` : 'No Vehicle Assigned'}</Text>
               </View>
             </View>
           </View>

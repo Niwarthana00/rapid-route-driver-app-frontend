@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -20,7 +20,11 @@ import { COLORS } from '../constants/theme';
 import { useAppState, CostItem } from '../context/AppStateContext';
 
 export const FuelLogScreen: React.FC = () => {
-  const { costs, totalFuelToday, totalRepairToday, totalFuelMonth, addCostLog } = useAppState();
+  const { costs, totalFuelToday, totalRepairToday, totalFuelMonth, addCostLog, refreshCosts } = useAppState();
+
+  useEffect(() => {
+    refreshCosts();
+  }, [refreshCosts]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [costType, setCostType] = useState<'FUEL' | 'REPAIR'>('FUEL');

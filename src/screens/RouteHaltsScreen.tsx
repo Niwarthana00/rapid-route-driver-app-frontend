@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Edit2, Play, Check } from 'lucide-react-native';
+import { Edit2, Play, Check, ChevronLeft, RefreshCw } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useAppState } from '../context/AppStateContext';
 
@@ -22,10 +23,14 @@ export const RouteHaltsScreen: React.FC<RouteHaltsScreenProps> = ({
   onBack,
   onConfirmStart,
 }) => {
-  const { activeRoute, activeRouteName, halts, updateHaltName, confirmStartTrip } = useAppState();
+  const { activeRoute, activeRouteName, halts, isSyncing, refreshHalts, updateHaltName, confirmStartTrip } = useAppState();
 
   const [editingHaltId, setEditingHaltId] = useState<string | null>(null);
   const [editingHaltName, setEditingHaltName] = useState('');
+
+  useEffect(() => {
+    refreshHalts();
+  }, [refreshHalts]);
 
   const openEditModal = (id: string, currentName: string) => {
     setEditingHaltId(id);
@@ -47,6 +52,21 @@ export const RouteHaltsScreen: React.FC<RouteHaltsScreenProps> = ({
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Top Bar with Back Button */}
+        <View style={styles.topBar}>
+          <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+            <ChevronLeft size={24} color="#0F172A" />
+          </TouchableOpacity>
+          <Text style={styles.topBarTitle}>Route Itinerary</Text>
+          <TouchableOpacity style={styles.backBtn} onPress={() => refreshHalts()}>
+            {isSyncing ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <RefreshCw size={18} color="#64748B" />
+            )}
+          </TouchableOpacity>
+        </View>
+
         {/* Header Title & Subtitle */}
         <View style={styles.header}>
           <Text style={styles.routeCodeTitle}>{activeRoute}</Text>
@@ -56,38 +76,61 @@ export const RouteHaltsScreen: React.FC<RouteHaltsScreenProps> = ({
             </Text>
             <View style={styles.locationDivider} />
             <Text style={styles.routeLocationText}>
-              {activeRouteName.split(' to ')[1] || 'Kottawa'}
+              {activeRouteName.split(' to ')[1] || 'Destination'}
             </Text>
           </View>
         </View>
 
         {/* Halts List */}
         <View style={styles.haltsList}>
-          {halts.map((halt, index) => (
-            <View key={halt.id} style={styles.haltCard}>
-              <View style={styles.numberCircle}>
-                <Text style={styles.numberText}>{index + 1}</Text>
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={styles.haltName}>{halt.name}</Text>
-                <Text style={styles.scheduledTime}>{halt.scheduledTime}</Text>
-              </View>
-
+          {isSyncing && halts.length === 0 ? (
+            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={{ marginTop: 12, fontSize: 14, color: '#64748B', fontWeight: '500' }}>
+                Fetching route halts from database...
+              </Text>
+            </View>
+          ) : halts.length === 0 ? (
+            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <Text style={{ fontSize: 15, color: '#64748B', fontWeight: '600' }}>
+                No active route halts found.
+              </Text>
               <TouchableOpacity
-                style={styles.editIconBtn}
-                onPress={() => openEditModal(halt.id, halt.name)}
+                style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#E0F2FE', borderRadius: 10 }}
+                onPress={() => refreshHalts()}
               >
-                <Edit2 size={18} color="#64748B" />
+                <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Tap to Retry</Text>
               </TouchableOpacity>
             </View>
-          ))}
+          ) : (
+            halts.map((halt, index) => (
+              <View key={halt.id} style={styles.haltCard}>
+                <View style={styles.numberCircle}>
+                  <Text style={styles.numberText}>{index + 1}</Text>
+                </View>
+
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={styles.haltName}>{halt.name}</Text>
+                  {halt.scheduledTime && <Text style={styles.scheduledTime}>{halt.scheduledTime}</Text>}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.editIconBtn}
+                  onPress={() => openEditModal(halt.id, halt.name)}
+                >
+                  <Edit2 size={18} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Bottom Confirm & Start Trip Button */}
-        <TouchableOpacity style={styles.confirmStartBtn} onPress={handleStartTrip}>
-          <Text style={styles.confirmStartText}>Confirm & Start Trip</Text>
-        </TouchableOpacity>
+        {halts.length > 0 && (
+          <TouchableOpacity style={styles.confirmStartBtn} onPress={handleStartTrip}>
+            <Text style={styles.confirmStartText}>Confirm & Start Trip</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* Edit Halt Modal */}
@@ -128,12 +171,33 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 14,
     paddingBottom: 40,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  topBarTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   header: {
     marginBottom: 20,
-    marginTop: 10,
+    marginTop: 4,
   },
   routeCodeTitle: {
     fontSize: 26,

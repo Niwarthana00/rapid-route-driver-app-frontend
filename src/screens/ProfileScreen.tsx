@@ -29,13 +29,14 @@ import { COLORS } from '../constants/theme';
 import { useAppState } from '../context/AppStateContext';
 
 export const ProfileScreen: React.FC = () => {
-  const { driverName, driverPhone, vehicleNo, logout } = useAppState();
+  const { driverName, driverPhone, vehicleNo, logout, updateProfileDetails } = useAppState();
 
   const [name, setName] = useState(driverName);
   const [phoneStr, setPhoneStr] = useState(driverPhone);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    await updateProfileDetails(name, phoneStr);
     setShowEditModal(false);
   };
 
