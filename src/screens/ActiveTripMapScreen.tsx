@@ -35,19 +35,33 @@ export const ActiveTripMapScreen: React.FC<ActiveTripMapScreenProps> = ({
     halts,
     currentHaltIndex,
     markHaltComplete,
+    finishTrip,
   } = useAppState();
 
-  const currentHalt = halts[currentHaltIndex] || halts[0];
-  const isLastHalt = currentHaltIndex >= halts.length - 1;
+  const currentHalt = (halts && halts[currentHaltIndex]) ? halts[currentHaltIndex] : (halts && halts[0]) ? halts[0] : {
+    id: 'halt-01',
+    name: 'Next Halt',
+    waitingCount: 6,
+    dropCount: 2,
+    distanceKm: 1.5,
+    etaMin: 5,
+  };
+  const isLastHalt = currentHaltIndex >= (halts?.length || 1) - 1;
 
-  const handleMarkComplete = () => {
-    if (currentHaltIndex < halts.length - 1) {
-      markHaltComplete(halts[currentHaltIndex].id);
-    } else {
-      markHaltComplete(halts[currentHaltIndex].id);
+  const handleMarkComplete = async () => {
+    if (halts && halts[currentHaltIndex]) {
+      await markHaltComplete(halts[currentHaltIndex].id);
+    }
+    if (isLastHalt) {
+      await finishTrip();
       onFinishTrip();
     }
   };
+
+  const waitingCount = (currentHalt as any).waitingCount ?? (currentHalt as any).passengersWaiting ?? 6;
+  const dropCount = (currentHalt as any).dropCount ?? (currentHalt as any).passengersAlighting ?? 2;
+  const distanceKm = (currentHalt as any).distanceKm ?? 1.2;
+  const etaMin = (currentHalt as any).etaMin ?? 4;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -103,18 +117,18 @@ export const ActiveTripMapScreen: React.FC<ActiveTripMapScreenProps> = ({
           <View style={styles.metricsRow}>
             <View style={styles.metricItem}>
               <Users size={20} color={COLORS.primary} />
-              <Text style={styles.waitingText}>{currentHalt.passengersWaiting} waiting</Text>
+              <Text style={styles.waitingText}>{waitingCount} waiting</Text>
             </View>
 
             <View style={styles.metricItem}>
               <Users size={20} color="#64748B" />
-              <Text style={styles.gettingOffText}>{currentHalt.passengersAlighting} getting off</Text>
+              <Text style={styles.gettingOffText}>{dropCount} getting off</Text>
             </View>
           </View>
 
           <View style={styles.distanceRow}>
             <MapPin size={18} color="#64748B" />
-            <Text style={styles.distanceText}>1.2 km • 4 min</Text>
+            <Text style={styles.distanceText}>{distanceKm} km • {etaMin} min</Text>
           </View>
         </View>
 
